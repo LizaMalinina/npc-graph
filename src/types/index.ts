@@ -27,6 +27,53 @@ export interface Relationship {
   toNpc?: Npc
 }
 
+// Crew types
+export interface Crew {
+  id: string
+  name: string
+  description?: string | null
+  imageUrl?: string | null
+  createdAt: Date
+  updatedAt: Date
+  members?: CrewMember[]
+}
+
+export interface CrewMember {
+  id: string
+  crewId: string
+  name: string
+  title?: string | null
+  imageUrl?: string | null
+  description?: string | null
+  createdAt: Date
+  updatedAt: Date
+  crew?: Crew
+}
+
+export interface CrewRelationship {
+  id: string
+  crewId: string
+  toNpcId: string
+  type: string
+  description?: string | null
+  strength: number
+  createdAt: Date
+  updatedAt: Date
+  toNpc?: Npc
+}
+
+export interface CrewMemberRelationship {
+  id: string
+  crewMemberId: string
+  toNpcId: string
+  type: string
+  description?: string | null
+  strength: number
+  createdAt: Date
+  updatedAt: Date
+  toNpc?: Npc
+}
+
 export interface GraphNode {
   id: string
   name: string
@@ -34,10 +81,14 @@ export interface GraphNode {
   imageUrl?: string | null
   faction?: string | null
   location?: string | null
-  status: string
+  status?: string  // Optional for crews
   tags?: string[]
   x?: number
   y?: number
+  // Crew-related properties
+  nodeType?: 'npc' | 'crew' | 'crew-member'
+  crewId?: string  // For crew members, reference to their crew
+  members?: GraphNode[]  // For crews, their members (when expanded)
 }
 
 export interface GraphLink {
@@ -47,11 +98,14 @@ export interface GraphLink {
   type: string
   description?: string | null
   strength: number
+  // Crew-related properties
+  linkSource?: 'npc' | 'crew' | 'crew-member'
 }
 
 export interface GraphData {
   nodes: GraphNode[]
   links: GraphLink[]
+  crews?: Crew[]  // Include crew data for reference
 }
 
 export interface FilterState {
@@ -60,6 +114,9 @@ export interface FilterState {
   statuses: string[]
   relationshipTypes: string[]
   searchQuery: string
+  crewViewMode: 'collapsed' | 'expanded'  // Show crew as single node or individual members
+  showCrewMembersOnly: boolean  // Filter to show only crew members
+  showNpcsOnly: boolean  // Filter to show only NPCs
 }
 
 export type UserRole = 'viewer' | 'editor' | 'admin'

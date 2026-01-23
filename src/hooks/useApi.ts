@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { GraphData, Npc, GraphLink } from '@/types'
+import { GraphData, Npc, GraphLink, Crew } from '@/types'
 
 const API_BASE = '/api'
 
@@ -159,6 +159,142 @@ export function useDeleteRelationship() {
         method: 'DELETE',
       })
       if (!res.ok) throw new Error('Failed to delete relationship')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['graph'] })
+    },
+  })
+}
+
+// ============ CREW HOOKS ============
+
+// Fetch all crews
+export function useCrews() {
+  return useQuery<Crew[]>({
+    queryKey: ['crews'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/crews`)
+      if (!res.ok) throw new Error('Failed to fetch crews')
+      return res.json()
+    },
+  })
+}
+
+// Create Crew
+export function useCreateCrew() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (data: Partial<Crew> & { members?: { name: string; title?: string; imageUrl?: string }[] }) => {
+      const res = await fetch(`${API_BASE}/crews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to create crew')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['graph'] })
+      queryClient.invalidateQueries({ queryKey: ['crews'] })
+    },
+  })
+}
+
+// Update Crew
+export function useUpdateCrew() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Crew> }) => {
+      const res = await fetch(`${API_BASE}/crews/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to update crew')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['graph'] })
+      queryClient.invalidateQueries({ queryKey: ['crews'] })
+    },
+  })
+}
+
+// Delete Crew
+export function useDeleteCrew() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/crews/${id}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('Failed to delete crew')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['graph'] })
+      queryClient.invalidateQueries({ queryKey: ['crews'] })
+    },
+  })
+}
+
+// Add Crew Member
+export function useAddCrewMember() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async ({ crewId, data }: { crewId: string; data: { name: string; title?: string; imageUrl?: string; description?: string } }) => {
+      const res = await fetch(`${API_BASE}/crews/${crewId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to add crew member')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['graph'] })
+      queryClient.invalidateQueries({ queryKey: ['crews'] })
+    },
+  })
+}
+
+// Create Crew Relationship (crew to NPC)
+export function useCreateCrewRelationship() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (data: { crewId: string; toNpcId: string; type: string; description?: string; strength?: number }) => {
+      const res = await fetch(`${API_BASE}/crew-relationships`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to create crew relationship')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['graph'] })
+    },
+  })
+}
+
+// Create Crew Member Relationship (crew member to NPC)
+export function useCreateCrewMemberRelationship() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (data: { crewMemberId: string; toNpcId: string; type: string; description?: string; strength?: number }) => {
+      const res = await fetch(`${API_BASE}/crew-member-relationships`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to create crew member relationship')
       return res.json()
     },
     onSuccess: () => {

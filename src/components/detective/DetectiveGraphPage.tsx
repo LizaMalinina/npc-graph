@@ -8,7 +8,7 @@ import DetectiveNpcPanel from '@/components/detective/DetectiveNpcPanel'
 import DetectiveLegend from '@/components/detective/DetectiveLegend'
 import NpcForm from '@/components/NpcForm'
 import RelationshipForm from '@/components/RelationshipForm'
-import { GraphNode, GraphLink, FilterState, Npc } from '@/types'
+import { GraphNode, GraphLink, FilterState, Npc, Crew } from '@/types'
 import {
   useGraphData,
   useCreateNpc,
@@ -17,6 +17,8 @@ import {
   useCreateRelationship,
   useUpdateRelationship,
   useDeleteRelationship,
+  useCrews,
+  useAddCrewMember,
 } from '@/hooks/useApi'
 
 export default function DetectiveGraphPage() {
@@ -29,22 +31,28 @@ export default function DetectiveGraphPage() {
     statuses: [],
     relationshipTypes: [],
     searchQuery: '',
+    crewViewMode: 'collapsed',
+    showCrewMembersOnly: false,
+    showNpcsOnly: false,
   })
 
   const [showNpcForm, setShowNpcForm] = useState(false)
   const [showRelationshipForm, setShowRelationshipForm] = useState(false)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
+  const [parentCrewNode, setParentCrewNode] = useState<GraphNode | null>(null)
   const [editingNpc, setEditingNpc] = useState<Npc | null>(null)
   const [editingRelationship, setEditingRelationship] = useState<GraphLink | null>(null)
   const [showLegend, setShowLegend] = useState(false)
 
   // API hooks
   const { data: graphData, isLoading, error } = useGraphData()
+  const { data: crews = [] } = useCrews()
   const createNpc = useCreateNpc()
   const updateNpc = useUpdateNpc()
   const deleteNpc = useDeleteNpc()
   const createRelationship = useCreateRelationship()
   const updateRelationship = useUpdateRelationship()
+  const addCrewMember = useAddCrewMember()
   const deleteRelationship = useDeleteRelationship()
 
   // Compute relationships for selected node
@@ -87,8 +95,30 @@ export default function DetectiveGraphPage() {
 
   // Handlers
   const handleNodeClick = (node: GraphNode) => {
+    // If clicking from a board node (not from within a panel), clear parent crew
+    if (!selectedNode || selectedNode.id !== node.id) {
+      setParentCrewNode(null)
+    }
     setSelectedNode(node)
     setEditingRelationship(null)
+  }
+
+  // Handle clicking a crew member from within a crew panel
+  const handleMemberClick = (member: GraphNode) => {
+    // Store the current crew node as parent before switching to member
+    if (selectedNode?.nodeType === 'crew') {
+      setParentCrewNode(selectedNode)
+    }
+    setSelectedNode(member)
+    setEditingRelationship(null)
+  }
+
+  // Handle going back to parent crew
+  const handleBackToCrew = () => {
+    if (parentCrewNode) {
+      setSelectedNode(parentCrewNode)
+      setParentCrewNode(null)
+    }
   }
 
   const handleLinkClick = (link: GraphLink) => {
@@ -100,6 +130,11 @@ export default function DetectiveGraphPage() {
 
   const handleCreateNpc = async (data: Partial<Npc>) => {
     await createNpc.mutateAsync(data)
+    setShowNpcForm(false)
+  }
+
+  const handleCreateCrewMember = async (crewId: string, data: { name: string; title?: string; description?: string; imageUrl?: string }) => {
+    await addCrewMember.mutateAsync({ crewId, data })
     setShowNpcForm(false)
   }
 
@@ -165,7 +200,7 @@ export default function DetectiveGraphPage() {
         imageUrl: selectedNode.imageUrl,
         faction: selectedNode.faction,
         location: selectedNode.location,
-        status: selectedNode.status,
+        status: selectedNode.status || 'alive',
         tags: selectedNode.tags?.join(', ') || null,
         posX: selectedNode.x,
         posY: selectedNode.y,
@@ -176,17 +211,69 @@ export default function DetectiveGraphPage() {
   }
 
   const data = useMemo(() => {
-    const emptyGraphData = { nodes: [], links: [] }
+    const emptyGraphData = { nodes: [] as GraphNode[], links: [] as GraphLink[] }
     if (!graphData) return emptyGraphData
-    return {
-      nodes: graphData.nodes.map(n => ({ ...n })),
-      links: graphData.links.map(l => ({
-        ...l,
-        source: typeof l.source === 'object' ? (l.source as { id: string }).id : l.source,
-        target: typeof l.target === 'object' ? (l.target as { id: string }).id : l.target,
-      })),
+    
+    // Get graph data with type assertion for extended properties
+    const extendedData = graphData as typeof graphData & {
+      crews?: GraphNode[]
+      crewMemberNodes?: GraphNode[]
+      crewLinks?: GraphLink[]
+      memberLinks?: (GraphLink & { crewId?: string })[]
     }
-  }, [graphData])
+    
+    // Debug logging
+    console.log('[DetectiveGraphPage] Computing data...')
+    console.log('[DetectiveGraphPage] filters:', JSON.stringify({ 
+      crewViewMode: filters.crewViewMode, 
+      showCrewMembersOnly: filters.showCrewMembersOnly, 
+      showNpcsOnly: filters.showNpcsOnly 
+    }))
+    console.log('[DetectiveGraphPage] extendedData crews:', extendedData.crews?.length ?? 0)
+    console.log('[DetectiveGraphPage] extendedData crewMemberNodes:', extendedData.crewMemberNodes?.length ?? 0)
+    
+    // Start with NPC nodes (unless filtering for crew members only)
+    let allNodes: GraphNode[] = filters.showCrewMembersOnly 
+      ? [] 
+      : graphData.nodes.map(n => ({ ...n, nodeType: n.nodeType || 'npc' as const }))
+    
+    let allLinks: GraphLink[] = filters.showCrewMembersOnly
+      ? []
+      : graphData.links.map(l => ({
+          ...l,
+          source: typeof l.source === 'object' ? (l.source as { id: string }).id : l.source,
+          target: typeof l.target === 'object' ? (l.target as { id: string }).id : l.target,
+        }))
+    
+    // Add crew-related nodes and links based on view mode
+    // If showCrewMembersOnly is true, always show crews/members regardless of NPCs Only filter
+    if (!filters.showNpcsOnly) {
+      if (filters.crewViewMode === 'collapsed') {
+        // Show crews as single nodes
+        if (extendedData.crews) {
+          allNodes = [...allNodes, ...extendedData.crews.map(c => ({ ...c, nodeType: 'crew' as const }))]
+        }
+        if (extendedData.crewLinks) {
+          allLinks = [...allLinks, ...extendedData.crewLinks]
+        }
+      } else {
+        // Show individual crew members (expanded mode)
+        if (extendedData.crewMemberNodes) {
+          allNodes = [...allNodes, ...extendedData.crewMemberNodes.map(m => ({ ...m, nodeType: 'crew-member' as const }))]
+        }
+        if (extendedData.memberLinks) {
+          allLinks = [...allLinks, ...extendedData.memberLinks]
+        }
+      }
+    }
+    
+    console.log('[DetectiveGraphPage] RESULT:', { nodesCount: allNodes.length, linksCount: allLinks.length, nodeTypes: allNodes.map(n => n.nodeType) })
+    
+    return {
+      nodes: allNodes,
+      links: allLinks,
+    }
+  }, [graphData, filters.crewViewMode, filters.showCrewMembersOnly, filters.showNpcsOnly])
 
   if (isLoading) {
     return (
@@ -296,8 +383,14 @@ export default function DetectiveGraphPage() {
               <DetectiveNpcPanel
                 node={selectedNode}
                 relationships={nodeRelationships}
-                onClose={() => setSelectedNode(null)}
+                onClose={() => {
+                  setSelectedNode(null)
+                  setParentCrewNode(null)
+                }}
                 onEdit={handleEditNpc}
+                onMemberClick={handleMemberClick}
+                onBackToCrew={handleBackToCrew}
+                parentCrew={parentCrewNode}
                 canEdit={canEdit}
               />
             </div>
@@ -319,11 +412,14 @@ export default function DetectiveGraphPage() {
         <NpcForm
           npc={editingNpc}
           onSubmit={editingNpc ? handleUpdateNpc : handleCreateNpc}
+          onSubmitCrewMember={handleCreateCrewMember}
           onCancel={() => {
             setShowNpcForm(false)
             setEditingNpc(null)
           }}
           onDelete={editingNpc ? handleDeleteNpc : undefined}
+          crews={crews}
+          allowCharacterTypeSelection={!editingNpc}
         />
       )}
 

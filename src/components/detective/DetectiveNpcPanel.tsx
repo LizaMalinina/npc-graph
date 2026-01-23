@@ -15,6 +15,9 @@ interface DetectiveNpcPanelProps {
   }
   onClose: () => void
   onEdit?: () => void
+  onMemberClick?: (member: GraphNode) => void
+  onBackToCrew?: () => void
+  parentCrew?: GraphNode | null
   canEdit: boolean
 }
 
@@ -23,15 +26,30 @@ export default function DetectiveNpcPanel({
   relationships,
   onClose,
   onEdit,
+  onMemberClick,
+  onBackToCrew,
+  parentCrew,
   canEdit,
 }: DetectiveNpcPanelProps) {
+  const isCrew = node.nodeType === 'crew'
+  const isCrewMember = node.nodeType === 'crew-member'
+
   return (
-    <div className="detective-npc-panel">
+    <div className={`detective-npc-panel ${isCrew ? 'crew-panel' : ''} ${isCrewMember ? 'crew-member-panel' : ''}`}>
       {/* Case file header */}
       <div className="case-file-header">
-        <div className="case-stamp">CLASSIFIED</div>
+        <div className={`case-stamp ${isCrew ? 'crew-stamp' : ''}`}>
+          {isCrew ? 'CREW DOSSIER' : isCrewMember ? 'CREW MEMBER' : 'CLASSIFIED'}
+        </div>
         <button onClick={onClose} className="close-btn">✕</button>
       </div>
+
+      {/* Back to crew button */}
+      {isCrewMember && parentCrew && onBackToCrew && (
+        <button className="back-to-crew-btn" onClick={onBackToCrew}>
+          ← Back to {parentCrew.name}
+        </button>
+      )}
 
       {/* Photo */}
       <div className="suspect-photo-wrapper">
@@ -46,13 +64,50 @@ export default function DetectiveNpcPanel({
         {node.status === 'unknown' && (
           <div className="status-stamp unknown">WHEREABOUTS UNKNOWN</div>
         )}
+        {isCrew && node.members && (
+          <div className="crew-member-count">
+            {node.members.length} members
+          </div>
+        )}
       </div>
 
       {/* Name and title */}
       <div className="suspect-info">
-        <h2 className="suspect-name">{node.name}</h2>
+        <h2 className="suspect-name">
+          {isCrew && <span className="type-icon">👥 </span>}
+          {isCrewMember && <span className="type-icon">👤 </span>}
+          {node.name}
+        </h2>
         {node.title && <p className="suspect-title">&ldquo;{node.title}&rdquo;</p>}
       </div>
+
+      {/* Crew Members Section - only for crew nodes */}
+      {isCrew && node.members && node.members.length > 0 && (
+        <div className="crew-members-section">
+          <h3 className="section-title">
+            <span className="yarn-icon">👥</span> Crew Members
+          </h3>
+          <div className="crew-members-grid">
+            {node.members.map(member => (
+              <button
+                key={member.id}
+                className="crew-member-card"
+                onClick={() => onMemberClick?.(member)}
+              >
+                <img
+                  src={member.imageUrl || getPlaceholderAvatar(member.name)}
+                  alt={member.name}
+                  className="member-photo"
+                />
+                <div className="member-info">
+                  <span className="member-name">{member.name}</span>
+                  {member.title && <span className="member-title">{member.title}</span>}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Details on torn paper */}
       <div className="case-details">
@@ -70,12 +125,23 @@ export default function DetectiveNpcPanel({
           </div>
         )}
 
-        <div className="detail-row">
-          <span className="detail-label">Status:</span>
-          <span className={`detail-value status-${node.status}`}>
-            {node.status.toUpperCase()}
-          </span>
-        </div>
+        {!isCrew && node.status && (
+          <div className="detail-row">
+            <span className="detail-label">Status:</span>
+            <span className={`detail-value status-${node.status}`}>
+              {node.status.toUpperCase()}
+            </span>
+          </div>
+        )}
+
+        {!isCrew && (
+          <div className="detail-row">
+            <span className="detail-label">Type:</span>
+            <span className={`detail-value type-badge ${isCrewMember ? 'crew-member-type' : 'npc-type'}`}>
+              {isCrewMember ? '👤 Crew Member' : '🎭 NPC'}
+            </span>
+          </div>
+        )}
 
         {node.tags && node.tags.length > 0 && (
           <div className="tags-section">

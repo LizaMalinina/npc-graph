@@ -1,16 +1,32 @@
 # NPC Graph - Relationship Manager
 
-A web application for managing and visualizing NPC (Non-Playable Character) relationships for tabletop RPG campaigns. Features an interactive graph visualization with filtering capabilities and role-based access control.
+A web application for managing and visualizing NPC (Non-Playable Character) relationships for tabletop RPG campaigns. Features an interactive graph visualization with filtering capabilities, a detective board view, crew management, and role-based access control.
 
 ## Features
 
 - 📊 **Interactive Graph Visualization** - D3-powered force-directed graph showing NPC relationships
-- 🔍 **Advanced Filtering** - Filter by faction, location, status, and relationship types
-- 👥 **NPC Management** - Add, edit, and delete NPCs with detailed information
+- 🕵️ **Detective Board View** - A themed investigation board with draggable photo nodes and yarn connections
+- 👥 **Crew Management** - Create and manage crews as groups of NPCs with their own relationships
+- 🔍 **Advanced Filtering** - Filter by faction, location, status, relationship types, and character type
+- 👤 **NPC Management** - Add, edit, and delete NPCs with detailed information
 - 🔗 **Relationship Management** - Create and manage relationships between NPCs with types and strengths
 - 🔐 **Role-Based Access** - Viewer, Editor, and Admin roles (demo mode included)
 - 💾 **Persistent Storage** - SQLite database for easy deployment and backup
 - 🐳 **Docker Support** - Run everything in containers without local dependencies
+
+## Views
+
+### Standard Graph View (`/`)
+The classic force-directed graph showing NPCs as nodes and relationships as links.
+
+### Detective Board View (`/detective`)
+An immersive investigation board themed like a detective's evidence wall:
+- Draggable photo cards on a cork board background
+- Yarn-like connections between characters
+- Pin colors indicating character status (alive/dead/unknown)
+- Crew view toggle (show as groups or individual members)
+- Character type filtering (NPCs only / Crew members only)
+- Click crew nodes to see all members and navigate between them
 
 ## Quick Start with Docker (Recommended)
 
@@ -59,25 +75,35 @@ npc-graph/
 │   │   ├── api/           # API routes
 │   │   │   ├── npcs/      # NPC CRUD operations
 │   │   │   ├── relationships/  # Relationship CRUD
-│   │   │   └── graph/     # Graph data endpoint
+│   │   │   ├── crews/     # Crew management
+│   │   │   ├── crew-relationships/  # Crew-to-NPC relationships
+│   │   │   ├── crew-member-relationships/  # Member-to-NPC relationships
+│   │   │   └── graph/     # Graph data endpoint (includes crews)
+│   │   ├── detective/     # Detective board page
 │   │   ├── layout.tsx     # Root layout
-│   │   └── page.tsx       # Main page
+│   │   └── page.tsx       # Main page (standard graph)
 │   ├── components/
+│   │   ├── detective/     # Detective board components
+│   │   │   ├── DetectiveBoard.tsx    # Draggable photo board
+│   │   │   ├── DetectiveFilterPanel.tsx  # Themed filters
+│   │   │   ├── DetectiveGraphPage.tsx    # Main page wrapper
+│   │   │   ├── DetectiveLegend.tsx   # Relationship legend
+│   │   │   └── DetectiveNpcPanel.tsx # Character detail panel
 │   │   ├── NpcGraph.tsx   # Force-directed graph
 │   │   ├── FilterPanel.tsx
-│   │   ├── NpcForm.tsx
+│   │   ├── NpcForm.tsx    # Create NPC or crew member
 │   │   ├── RelationshipForm.tsx
 │   │   ├── NpcDetailPanel.tsx
 │   │   └── Legend.tsx
 │   ├── hooks/
-│   │   └── useApi.ts      # React Query hooks
+│   │   └── useApi.ts      # React Query hooks (NPCs, crews, relationships)
 │   ├── lib/
 │   │   └── prisma.ts      # Database client
 │   └── types/
-│       └── index.ts       # TypeScript types
+│       └── index.ts       # TypeScript types (includes Crew types)
 ├── prisma/
-│   ├── schema.prisma      # Database schema
-│   └── seed.ts            # Sample data
+│   ├── schema.prisma      # Database schema (NPCs, Crews, Relationships)
+│   └── seed.ts            # Sample data with crews
 ├── Dockerfile
 ├── docker-compose.yml
 └── package.json
@@ -112,7 +138,21 @@ npc-graph/
 - `DELETE /api/relationships/:id` - Delete relationship
 
 ### Graph
-- `GET /api/graph` - Get optimized graph data
+- `GET /api/graph` - Get optimized graph data (includes crews and member nodes)
+
+### Crews
+- `GET /api/crews` - List all crews with members
+- `POST /api/crews` - Create new crew
+- `GET /api/crews/:id` - Get crew details
+- `PUT /api/crews/:id` - Update crew
+- `DELETE /api/crews/:id` - Delete crew
+- `POST /api/crews/:id/members` - Add member to crew
+
+### Crew Relationships
+- `GET /api/crew-relationships` - List crew-to-NPC relationships
+- `POST /api/crew-relationships` - Create crew relationship
+- `GET /api/crew-member-relationships` - List member-to-NPC relationships
+- `POST /api/crew-member-relationships` - Create member relationship
 
 ## Relationship Types
 
@@ -147,11 +187,11 @@ cp prisma/dev.db prisma/backup.db
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 16 (App Router with Turbopack)
 - **Database**: SQLite + Prisma ORM
 - **Graph**: react-force-graph-2d (D3-based)
 - **State**: TanStack Query (React Query)
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS + Custom detective theme
 - **Container**: Docker
 
 ## Future Enhancements
@@ -163,6 +203,9 @@ cp prisma/dev.db prisma/backup.db
 - [ ] Collaborative real-time editing
 - [ ] Advanced graph layouts
 - [ ] Timeline view for relationship changes
+- [x] Detective board visualization
+- [x] Crew management system
+- [x] Crew member navigation (back to crew)
 
 ## License
 

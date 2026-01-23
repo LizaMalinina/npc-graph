@@ -290,6 +290,158 @@ async function main() {
   ])
 
   console.log(`Created ${relationships.length} relationships`)
+
+  // Create the player's crew (party)
+  const crew = await prisma.crew.create({
+    data: {
+      name: 'The Iron Wolves',
+      description: 'A band of adventurers seeking fortune and justice in the realm',
+      imageUrl: 'https://api.dicebear.com/7.x/shapes/svg?seed=IronWolves&backgroundColor=3A5F4B',
+    },
+  })
+
+  console.log(`Created crew: ${crew.name}`)
+
+  // Create crew members
+  const crewMembers = await Promise.all([
+    prisma.crewMember.create({
+      data: {
+        crewId: crew.id,
+        name: 'Vex Shadowmere',
+        title: 'Rogue Leader',
+        description: 'Quick-witted half-elf with a troubled past and golden heart',
+        imageUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=VexShadowmere&backgroundColor=4a7a5f',
+      },
+    }),
+    prisma.crewMember.create({
+      data: {
+        crewId: crew.id,
+        name: 'Bjorn Ironside',
+        title: 'The Shield',
+        description: 'Stalwart dwarven warrior and the crew\'s protector',
+        imageUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=BjornIronside&backgroundColor=4a7a5f',
+      },
+    }),
+    prisma.crewMember.create({
+      data: {
+        crewId: crew.id,
+        name: 'Elara Starweaver',
+        title: 'Mystic',
+        description: 'Elven sorcerer with powers tied to the celestial bodies',
+        imageUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=ElaraStarweaver&backgroundColor=4a7a5f',
+      },
+    }),
+    prisma.crewMember.create({
+      data: {
+        crewId: crew.id,
+        name: 'Finn Brightwood',
+        title: 'The Healer',
+        description: 'Human cleric with unwavering faith and a gentle soul',
+        imageUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=FinnBrightwood&backgroundColor=4a7a5f',
+      },
+    }),
+  ])
+
+  console.log(`Created ${crewMembers.length} crew members`)
+
+  // Create crew relationships (crew as a whole to NPCs)
+  const crewRelationships = await Promise.all([
+    prisma.crewRelationship.create({
+      data: {
+        crewId: crew.id,
+        toNpcId: npcs[0].id, // Eldric
+        type: 'ally',
+        description: 'The crew has helped Eldric on multiple quests',
+        strength: 8,
+      },
+    }),
+    prisma.crewRelationship.create({
+      data: {
+        crewId: crew.id,
+        toNpcId: npcs[6].id, // Whisper
+        type: 'business',
+        description: 'Regular clients for information',
+        strength: 6,
+      },
+    }),
+    prisma.crewRelationship.create({
+      data: {
+        crewId: crew.id,
+        toNpcId: npcs[1].id, // Kira
+        type: 'rival',
+        description: 'Crossed paths during a heist gone wrong',
+        strength: 5,
+      },
+    }),
+    prisma.crewRelationship.create({
+      data: {
+        crewId: crew.id,
+        toNpcId: npcs[7].id, // Captain Helena
+        type: 'ally',
+        description: 'Proven themselves as trustworthy to the guard',
+        strength: 7,
+      },
+    }),
+  ])
+
+  console.log(`Created ${crewRelationships.length} crew relationships`)
+
+  // Create individual crew member relationships
+  const memberRelationships = await Promise.all([
+    // Vex has personal history with Kira
+    prisma.crewMemberRelationship.create({
+      data: {
+        crewMemberId: crewMembers[0].id, // Vex
+        toNpcId: npcs[1].id, // Kira
+        type: 'rival',
+        description: 'Former partners, now bitter rivals',
+        strength: 7,
+      },
+    }),
+    // Bjorn trained under Tormund
+    prisma.crewMemberRelationship.create({
+      data: {
+        crewMemberId: crewMembers[1].id, // Bjorn
+        toNpcId: npcs[2].id, // Tormund
+        type: 'mentor',
+        description: 'Tormund taught Bjorn the art of smithing',
+        strength: 8,
+      },
+    }),
+    // Elara studied under Eldric
+    prisma.crewMemberRelationship.create({
+      data: {
+        crewMemberId: crewMembers[2].id, // Elara
+        toNpcId: npcs[0].id, // Eldric
+        type: 'mentor',
+        description: 'Eldric recognizes great potential in Elara',
+        strength: 6,
+      },
+    }),
+    // Finn serves Brother Marcus
+    prisma.crewMemberRelationship.create({
+      data: {
+        crewMemberId: crewMembers[3].id, // Finn
+        toNpcId: npcs[5].id, // Brother Marcus
+        type: 'ally',
+        description: 'Fellow servants of the Light',
+        strength: 9,
+      },
+    }),
+    // Vex has dealings with Whisper
+    prisma.crewMemberRelationship.create({
+      data: {
+        crewMemberId: crewMembers[0].id, // Vex
+        toNpcId: npcs[6].id, // Whisper
+        type: 'business',
+        description: 'Personal information network',
+        strength: 5,
+      },
+    }),
+  ])
+
+  console.log(`Created ${memberRelationships.length} crew member relationships`)
+
   console.log('Database seeded successfully!')
 }
 

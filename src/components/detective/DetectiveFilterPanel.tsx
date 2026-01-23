@@ -52,6 +52,16 @@ export default function DetectiveFilterPanel({
       statuses: [],
       relationshipTypes: [],
       searchQuery: '',
+      crewViewMode: 'collapsed',
+      showCrewMembersOnly: false,
+      showNpcsOnly: false,
+    })
+  }
+
+  const toggleCrewViewMode = () => {
+    onFiltersChange({
+      ...filters,
+      crewViewMode: filters.crewViewMode === 'collapsed' ? 'expanded' : 'collapsed',
     })
   }
 
@@ -60,10 +70,69 @@ export default function DetectiveFilterPanel({
     filters.factions.length > 0 ||
     filters.locations.length > 0 ||
     filters.statuses.length > 0 ||
-    filters.relationshipTypes.length > 0
+    filters.relationshipTypes.length > 0 ||
+    filters.showCrewMembersOnly ||
+    filters.showNpcsOnly
+
+  const toggleCharacterTypeFilter = (type: 'crew' | 'npc') => {
+    console.log('[FilterPanel] toggleCharacterTypeFilter called with:', type)
+    if (type === 'crew') {
+      const newFilters = {
+        ...filters,
+        showCrewMembersOnly: !filters.showCrewMembersOnly,
+        showNpcsOnly: false, // Can't have both
+      }
+      console.log('[FilterPanel] Setting filters to:', newFilters)
+      onFiltersChange(newFilters)
+    } else {
+      onFiltersChange({
+        ...filters,
+        showNpcsOnly: !filters.showNpcsOnly,
+        showCrewMembersOnly: false, // Can't have both
+      })
+    }
+  }
 
   return (
     <div className="detective-filters">
+      {/* Crew View Toggle */}
+      <div className="filter-section crew-toggle-section">
+        <h4 className="filter-title">👥 Crew View</h4>
+        <div className="crew-toggle">
+          <button
+            onClick={toggleCrewViewMode}
+            className={`crew-toggle-btn ${filters.crewViewMode === 'collapsed' ? 'active' : ''}`}
+          >
+            🎭 As Group
+          </button>
+          <button
+            onClick={toggleCrewViewMode}
+            className={`crew-toggle-btn ${filters.crewViewMode === 'expanded' ? 'active' : ''}`}
+          >
+            👤 Members
+          </button>
+        </div>
+      </div>
+
+      {/* Character Type Filter */}
+      <div className="filter-section">
+        <h4 className="filter-title">🎯 Character Type</h4>
+        <div className="filter-tags">
+          <button
+            onClick={() => toggleCharacterTypeFilter('crew')}
+            className={`filter-tag character-type-tag ${filters.showCrewMembersOnly ? 'active crew-filter' : ''}`}
+          >
+            {filters.crewViewMode === 'collapsed' ? '👥 Crews Only' : '👤 Crew Members Only'}
+          </button>
+          <button
+            onClick={() => toggleCharacterTypeFilter('npc')}
+            className={`filter-tag character-type-tag ${filters.showNpcsOnly ? 'active npc-filter' : ''}`}
+          >
+            🎭 NPCs Only
+          </button>
+        </div>
+      </div>
+
       {/* Search */}
       <div className="filter-section">
         <div className="search-wrapper">

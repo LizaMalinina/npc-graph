@@ -68,11 +68,13 @@ export default function DetectiveBoard({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
-  const initialPositionsSet = useRef(false)
 
   // Filter nodes and links
   const { filteredNodes, filteredLinks } = useMemo(() => {
     let filteredNodes = [...data.nodes]
+
+    // Note: Character type filtering (showCrewMembersOnly/showNpcsOnly) is now handled 
+    // in DetectiveGraphPage data composition for better performance
 
     // Apply search filter
     if (filters.searchQuery) {
@@ -85,24 +87,24 @@ export default function DetectiveBoard({
       )
     }
 
-    // Apply faction filter
+    // Apply faction filter (only for nodes that have factions - NPCs)
     if (filters.factions.length > 0) {
       filteredNodes = filteredNodes.filter(
-        node => node.faction && filters.factions.includes(node.faction)
+        node => !node.faction || filters.factions.includes(node.faction)
       )
     }
 
-    // Apply location filter
+    // Apply location filter (only for nodes that have locations - NPCs)
     if (filters.locations.length > 0) {
       filteredNodes = filteredNodes.filter(
-        node => node.location && filters.locations.includes(node.location)
+        node => !node.location || filters.locations.includes(node.location)
       )
     }
 
-    // Apply status filter
+    // Apply status filter (only for nodes that have status - NPCs)
     if (filters.statuses.length > 0) {
       filteredNodes = filteredNodes.filter(node =>
-        filters.statuses.includes(node.status)
+        !node.status || filters.statuses.includes(node.status)
       )
     }
 
@@ -142,13 +144,10 @@ export default function DetectiveBoard({
   // Calculate initial positions in a circular layout with player group at center
   useEffect(() => {
     if (filteredNodes.length === 0) return
-    if (initialPositionsSet.current && positions.size > 0) return // Only set once
 
     const centerX = dimensions.width / 2
     const centerY = dimensions.height / 2
     const radius = Math.min(dimensions.width, dimensions.height) * 0.35
-
-    const newPositions = new Map<string, { x: number; y: number }>()
 
     // Find the "player group" node or use first node as center
     const playerGroupNode = filteredNodes.find(n => 
@@ -156,26 +155,41 @@ export default function DetectiveBoard({
       n.name.toLowerCase().includes('group') ||
       n.name.toLowerCase().includes('party')
     )
-
     const centerNodeId = playerGroupNode?.id
-    const otherNodes = filteredNodes.filter(n => n.id !== centerNodeId)
+    
+    // Use functional update to avoid stale closure issues
+    setPositions(prevPositions => {
+      // Check if we have new nodes that don't have positions yet
+      const nodesWithoutPositions = filteredNodes.filter(n => !prevPositions.has(n.id))
+      
+      // If all current nodes have positions, skip
+      if (nodesWithoutPositions.length === 0) {
+        return prevPositions
+      }
 
-    // Place center node (player group)
-    if (centerNodeId) {
-      newPositions.set(centerNodeId, { x: centerX, y: centerY })
-    }
+      console.log('[DetectiveBoard] Calculating positions for', nodesWithoutPositions.length, 'new nodes')
+      
+      const newPositions = new Map<string, { x: number; y: number }>(prevPositions)
+      
+      // Only position nodes that don't have positions yet
+      nodesWithoutPositions.forEach((node, index) => {
+        // If this is the center node, put it in the center
+        if (node.id === centerNodeId && !newPositions.has(centerNodeId)) {
+          newPositions.set(centerNodeId, { x: centerX, y: centerY })
+        } else if (!newPositions.has(node.id)) {
+          // Place in a circle around center
+          const totalNewNodes = nodesWithoutPositions.length
+          const angle = (2 * Math.PI * index) / totalNewNodes - Math.PI / 2
+          const x = centerX + radius * Math.cos(angle)
+          const y = centerY + radius * Math.sin(angle)
+          newPositions.set(node.id, { x, y })
+        }
+      })
 
-    // Place other nodes in a circle around center
-    otherNodes.forEach((node, index) => {
-      const angle = (2 * Math.PI * index) / otherNodes.length - Math.PI / 2
-      const x = centerX + radius * Math.cos(angle)
-      const y = centerY + radius * Math.sin(angle)
-      newPositions.set(node.id, { x, y })
+      console.log('[DetectiveBoard] Updated positions, total:', newPositions.size)
+      return newPositions
     })
-
-    initialPositionsSet.current = true
-    setPositions(newPositions)
-  }, [filteredNodes, dimensions, positions.size])
+  }, [filteredNodes, dimensions])
 
   // Mouse handlers for dragging
   const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
@@ -298,28 +312,37 @@ export default function DetectiveBoard({
       {/* Photo nodes */}
       {filteredNodes.map(node => {
         const pos = positions.get(node.id)
-        if (!pos) return null
+        if (!pos) {
+          console.log('[DetectiveBoard] No position for node:', node.id, node.name)
+          return null
+        }
 
         const rotation = getRandomRotation(node.id)
         const isSelected = selectedNodeId === node.id
         const isConnected = selectedNodeId ? connectedNodes.has(node.id) : true
         const isHovered = hoveredNode === node.id
         const isDead = node.status === 'dead'
+        const isCrew = node.nodeType === 'crew'
+        const isCrewMember = node.nodeType === 'crew-member'
         const isPlayerGroup = node.name.toLowerCase().includes('player') || 
                              node.name.toLowerCase().includes('group') ||
-                             node.name.toLowerCase().includes('party')
+                             node.name.toLowerCase().includes('party') ||
+                             isCrew
+
+        // Get member count for crew nodes
+        const memberCount = isCrew && node.members ? node.members.length : 0
 
         return (
           <div
             key={node.id}
-            className={`polaroid-card ${isSelected ? 'selected' : ''} ${isDead ? 'dead' : ''} ${isPlayerGroup ? 'player-group' : ''}`}
+            className={`polaroid-card ${isSelected ? 'selected' : ''} ${isDead ? 'dead' : ''} ${isPlayerGroup ? 'player-group' : ''} ${isCrew ? 'crew-node' : ''} ${isCrewMember ? 'crew-member-node' : ''}`}
             style={{
               position: 'absolute',
               left: pos.x,
               top: pos.y,
               transform: `translate(-50%, -50%) rotate(${isHovered || isSelected ? 0 : rotation}deg) ${isHovered ? 'scale(1.1)' : isSelected ? 'scale(1.15)' : 'scale(1)'}`,
               opacity: isConnected ? 1 : 0.3,
-              zIndex: isSelected ? 100 : isHovered ? 50 : 10,
+              zIndex: isSelected ? 100 : isHovered ? 50 : isCrew ? 15 : 10,
               transition: draggingNode === node.id ? 'none' : 'transform 0.2s ease, opacity 0.3s ease, z-index 0s',
               cursor: draggingNode === node.id ? 'grabbing' : 'grab',
             }}
@@ -331,7 +354,7 @@ export default function DetectiveBoard({
             {/* Push pin */}
             <div 
               className="push-pin"
-              style={{ backgroundColor: getPinColor(node.status) }}
+              style={{ backgroundColor: isCrew ? '#3b82f6' : isCrewMember ? '#8b5cf6' : getPinColor(node.status || 'alive') }}
             />
 
             {/* Photo frame */}
@@ -342,6 +365,18 @@ export default function DetectiveBoard({
                 className="photo-image"
                 draggable={false}
               />
+              
+              {/* Crew member badge */}
+              {isCrew && memberCount > 0 && (
+                <div className="crew-badge">
+                  <span className="crew-badge-count">{memberCount}</span>
+                </div>
+              )}
+
+              {/* Crew member indicator */}
+              {isCrewMember && (
+                <div className="crew-member-indicator">👤</div>
+              )}
               
               {/* Dead overlay */}
               {isDead && (
@@ -354,6 +389,8 @@ export default function DetectiveBoard({
             {/* Name label (sticky note style) */}
             {(isHovered || isSelected) && (
               <div className="name-label">
+                {isCrew && <span className="crew-label-prefix">👥 </span>}
+                {isCrewMember && <span className="crew-label-prefix">👤 </span>}
                 {node.name}
                 {node.title && <span className="title-text">{node.title}</span>}
               </div>
