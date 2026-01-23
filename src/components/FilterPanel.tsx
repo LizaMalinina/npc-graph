@@ -40,6 +40,9 @@ export default function FilterPanel({ data, filters, onFiltersChange }: FilterPa
       statuses: [],
       relationshipTypes: [],
       searchQuery: '',
+      crewViewMode: 'all',
+      showCrewMembersOnly: false,
+      showNpcsOnly: false,
     })
   }
 
