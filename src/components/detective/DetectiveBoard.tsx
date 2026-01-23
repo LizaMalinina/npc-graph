@@ -149,13 +149,14 @@ export default function DetectiveBoard({
     const centerY = dimensions.height / 2
     const radius = Math.min(dimensions.width, dimensions.height) * 0.35
 
-    // Find the "player group" node or use first node as center
+    // Find the node to center: prioritize crew nodes, then player group nodes
+    const crewNode = filteredNodes.find(n => n.nodeType === 'crew')
     const playerGroupNode = filteredNodes.find(n => 
       n.name.toLowerCase().includes('player') || 
       n.name.toLowerCase().includes('group') ||
       n.name.toLowerCase().includes('party')
     )
-    const centerNodeId = playerGroupNode?.id
+    const centerNodeId = crewNode?.id || playerGroupNode?.id
     
     // Use functional update to avoid stale closure issues
     setPositions(prevPositions => {
@@ -173,16 +174,21 @@ export default function DetectiveBoard({
       
       // Only position nodes that don't have positions yet
       nodesWithoutPositions.forEach((node, index) => {
-        // If this is the center node, put it in the center
-        if (node.id === centerNodeId && !newPositions.has(centerNodeId)) {
-          newPositions.set(centerNodeId, { x: centerX, y: centerY })
+        // If this is a crew node or the center node, put it in the center
+        if ((node.nodeType === 'crew' || node.id === centerNodeId) && !newPositions.has(node.id)) {
+          newPositions.set(node.id, { x: centerX, y: centerY })
         } else if (!newPositions.has(node.id)) {
           // Place in a circle around center
-          const totalNewNodes = nodesWithoutPositions.length
-          const angle = (2 * Math.PI * index) / totalNewNodes - Math.PI / 2
-          const x = centerX + radius * Math.cos(angle)
-          const y = centerY + radius * Math.sin(angle)
-          newPositions.set(node.id, { x, y })
+          const totalNewNodes = nodesWithoutPositions.filter(n => n.nodeType !== 'crew' && n.id !== centerNodeId).length
+          const nonCenterIndex = nodesWithoutPositions
+            .filter(n => n.nodeType !== 'crew' && n.id !== centerNodeId)
+            .indexOf(node)
+          if (nonCenterIndex >= 0) {
+            const angle = (2 * Math.PI * nonCenterIndex) / totalNewNodes - Math.PI / 2
+            const x = centerX + radius * Math.cos(angle)
+            const y = centerY + radius * Math.sin(angle)
+            newPositions.set(node.id, { x, y })
+          }
         }
       })
 

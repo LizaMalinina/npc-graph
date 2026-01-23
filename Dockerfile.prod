@@ -9,7 +9,7 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
@@ -21,6 +21,9 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+
+# Use PostgreSQL schema for production
+RUN cp prisma/schema.postgres.prisma prisma/schema.prisma
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -46,6 +49,8 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
@@ -57,5 +62,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Run migrations and start server
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+# Run migrations using installed prisma (not npx) and start server
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --skip-generate && node server.js"]

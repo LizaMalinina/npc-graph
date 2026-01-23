@@ -203,6 +203,8 @@ cp prisma/dev.db prisma/backup.db
 - [ ] Collaborative real-time editing
 - [ ] Advanced graph layouts
 - [ ] Timeline view for relationship changes
+- [ ] Mobile-responsive design and touch support
+- [ ] Zoom in/out controls for board navigation
 - [x] Detective board visualization
 - [x] Crew management system
 - [x] Crew member navigation (back to crew)
