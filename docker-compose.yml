@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source code for hot reload (excluding node_modules)
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      # Persist SQLite database
+      - ./prisma:/app/prisma
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=file:./dev.db
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=your-super-secret-key-change-in-production
+    stdin_open: true
+    tty: true
