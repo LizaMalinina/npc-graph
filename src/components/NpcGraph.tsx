@@ -101,7 +101,7 @@ export default function NpcGraph({
     // Apply status filter
     if (filters.statuses.length > 0) {
       filteredNodes = filteredNodes.filter(node =>
-        filters.statuses.includes(node.status)
+        node.status && filters.statuses.includes(node.status)
       )
     }
 
@@ -131,7 +131,7 @@ export default function NpcGraph({
       nodesMap.set(node.id, node)
       const imageUrl = node.imageUrl || getPlaceholderAvatar(node.name)
       const factionColor = getFactionColor(node.faction)
-      const opacity = getNodeOpacity(node.status)
+      const opacity = getNodeOpacity(node.status || 'alive')
       return {
         id: node.id,
         label: node.name,
@@ -284,7 +284,7 @@ export default function NpcGraph({
         },
         edges: {
           width: 2,
-          smooth: { type: 'continuous' },
+          smooth: { enabled: true, type: 'continuous', roundness: 0.5 },
           selectionWidth: 0, // Don't change width on selection
           chosen: {
             edge: false, // Disable default selection styling for edges

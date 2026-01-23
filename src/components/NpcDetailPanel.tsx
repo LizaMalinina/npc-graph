@@ -60,7 +60,7 @@ export default function NpcDetailPanel({
                 : 'bg-gray-600'
             }`}
           >
-            {node.status.toUpperCase()}
+            {(node.status || 'unknown').toUpperCase()}
           </span>
           {node.faction && (
             <span className="px-2 py-1 bg-blue-600 rounded text-xs">

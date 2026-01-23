@@ -32,6 +32,9 @@ export default function GraphPage() {
     statuses: [],
     relationshipTypes: [],
     searchQuery: '',
+    crewViewMode: 'collapsed',
+    showCrewMembersOnly: false,
+    showNpcsOnly: false,
   })
 
   // Modal states
@@ -166,7 +169,7 @@ export default function GraphPage() {
         imageUrl: selectedNode.imageUrl,
         faction: selectedNode.faction,
         location: selectedNode.location,
-        status: selectedNode.status,
+        status: selectedNode.status || 'alive',
         tags: selectedNode.tags?.join(', ') || null,
         posX: selectedNode.x,
         posY: selectedNode.y,

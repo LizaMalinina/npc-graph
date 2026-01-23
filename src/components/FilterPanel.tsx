@@ -40,7 +40,7 @@ export default function FilterPanel({ data, filters, onFiltersChange }: FilterPa
       statuses: [],
       relationshipTypes: [],
       searchQuery: '',
-      crewViewMode: 'all',
+      crewViewMode: 'collapsed',
       showCrewMembersOnly: false,
       showNpcsOnly: false,
     })
@@ -137,7 +137,7 @@ export default function FilterPanel({ data, filters, onFiltersChange }: FilterPa
           <div>
             <label className="block text-sm font-medium mb-2">Status</label>
             <div className="flex flex-wrap gap-2">
-              {statuses.map(status => (
+              {statuses.filter((s): s is string => !!s).map(status => (
                 <button
                   key={status}
                   onClick={() => toggleFilter('statuses', status)}

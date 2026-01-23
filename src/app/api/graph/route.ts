@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import type { Npc, Relationship, Crew, CrewMember, CrewRelationship, CrewMemberRelationship } from '@prisma/client'
+
+type CrewWithMembers = Crew & { members: CrewMember[] }
+type CrewMemberRelationshipWithMember = CrewMemberRelationship & { crewMember: CrewMember }
 
 // GET graph data (optimized for visualization)
 export async function GET() {
@@ -18,10 +22,10 @@ export async function GET() {
           crewMember: true,
         },
       }),
-    ])
+    ]) as [Npc[], Relationship[], CrewWithMembers[], CrewRelationship[], CrewMemberRelationshipWithMember[]]
     
     // NPC nodes
-    const npcNodes = npcs.map(npc => ({
+    const npcNodes = npcs.map((npc: Npc) => ({
       id: npc.id,
       name: npc.name,
       title: npc.title,
@@ -29,14 +33,14 @@ export async function GET() {
       faction: npc.faction,
       location: npc.location,
       status: npc.status,
-      tags: npc.tags ? npc.tags.split(',').map(t => t.trim()) : [],
+      tags: npc.tags ? npc.tags.split(',').map((t: string) => t.trim()) : [],
       x: npc.posX,
       y: npc.posY,
       nodeType: 'npc' as const,
     }))
     
     // Crew nodes (for collapsed view)
-    const crewNodes = crews.map(crew => ({
+    const crewNodes = crews.map((crew: CrewWithMembers) => ({
       id: `crew-${crew.id}`,
       name: crew.name,
       title: `Crew (${crew.members.length} members)`,
@@ -46,7 +50,7 @@ export async function GET() {
       status: 'alive',
       tags: ['crew'],
       nodeType: 'crew' as const,
-      members: crew.members.map(m => ({
+      members: crew.members.map((m: CrewMember) => ({
         id: `member-${m.id}`,
         name: m.name,
         title: m.title,
@@ -61,8 +65,8 @@ export async function GET() {
     }))
     
     // Crew member nodes (for expanded view)
-    const crewMemberNodes = crews.flatMap(crew => 
-      crew.members.map(m => ({
+    const crewMemberNodes = crews.flatMap((crew: CrewWithMembers) => 
+      crew.members.map((m: CrewMember) => ({
         id: `member-${m.id}`,
         name: m.name,
         title: m.title,
@@ -77,7 +81,7 @@ export async function GET() {
     )
     
     // NPC to NPC relationships
-    const npcLinks = relationships.map(rel => ({
+    const npcLinks = relationships.map((rel: Relationship) => ({
       id: rel.id,
       source: rel.fromNpcId,
       target: rel.toNpcId,
@@ -88,7 +92,7 @@ export async function GET() {
     }))
     
     // Crew to NPC relationships
-    const crewLinks = crewRelationships.map(rel => ({
+    const crewLinks = crewRelationships.map((rel: CrewRelationship) => ({
       id: `crew-rel-${rel.id}`,
       source: `crew-${rel.crewId}`,
       target: rel.toNpcId,
@@ -99,7 +103,7 @@ export async function GET() {
     }))
     
     // Crew member to NPC relationships
-    const memberLinks = crewMemberRelationships.map(rel => ({
+    const memberLinks = crewMemberRelationships.map((rel: CrewMemberRelationshipWithMember) => ({
       id: `member-rel-${rel.id}`,
       source: `member-${rel.crewMemberId}`,
       target: rel.toNpcId,
