@@ -1,3 +1,19 @@
+// Campaign types
+export interface Campaign {
+  id: string
+  name: string
+  description?: string | null
+  imageUrl?: string | null
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+  crew?: Crew
+  npcs?: Npc[]
+  _count?: {
+    npcs: number
+  }
+}
+
 export interface Npc {
   id: string
   name: string
@@ -10,6 +26,7 @@ export interface Npc {
   tags?: string | null
   posX?: number | null
   posY?: number | null
+  campaignId?: string | null
   createdAt: Date
   updatedAt: Date
 }

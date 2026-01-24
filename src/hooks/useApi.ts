@@ -1,21 +1,71 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { GraphData, Npc, GraphLink, Crew } from '@/types'
+import { GraphData, Npc, GraphLink, Crew, Campaign } from '@/types'
 
 const API_BASE = '/api'
 
-// Fetch graph data
-export function useGraphData() {
-  return useQuery<GraphData>({
-    queryKey: ['graph'],
+// ============ CAMPAIGNS ============
+
+// Fetch all campaigns
+export function useCampaigns() {
+  return useQuery<Campaign[]>({
+    queryKey: ['campaigns'],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/graph`)
-      if (!res.ok) throw new Error('Failed to fetch graph data')
+      const res = await fetch(`${API_BASE}/campaigns`)
+      if (!res.ok) throw new Error('Failed to fetch campaigns')
       return res.json()
     },
   })
 }
+
+// Fetch single campaign
+export function useCampaign(id: string) {
+  return useQuery<Campaign>({
+    queryKey: ['campaign', id],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/campaigns/${id}`)
+      if (!res.ok) throw new Error('Failed to fetch campaign')
+      return res.json()
+    },
+    enabled: !!id,
+  })
+}
+
+// Create campaign
+export function useCreateCampaign() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (data: { name: string; description?: string; crewName?: string }) => {
+      const res = await fetch(`${API_BASE}/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to create campaign')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+    },
+  })
+}
+
+// Fetch graph data for a campaign
+export function useCampaignGraphData(campaignId: string) {
+  return useQuery<GraphData & { campaign: { id: string; name: string; description?: string } }>({
+    queryKey: ['campaign-graph', campaignId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/campaigns/${campaignId}/graph`)
+      if (!res.ok) throw new Error('Failed to fetch campaign graph data')
+      return res.json()
+    },
+    enabled: !!campaignId,
+  })
+}
+
+// ============ NPCs ============
 
 // Fetch all NPCs
 export function useNpcs() {
@@ -57,8 +107,8 @@ export function useCreateNpc() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graph'] })
       queryClient.invalidateQueries({ queryKey: ['npcs'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
     },
   })
 }
@@ -78,8 +128,8 @@ export function useUpdateNpc() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graph'] })
       queryClient.invalidateQueries({ queryKey: ['npcs'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
     },
   })
 }
@@ -97,8 +147,8 @@ export function useDeleteNpc() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graph'] })
       queryClient.invalidateQueries({ queryKey: ['npcs'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
     },
   })
 }
@@ -124,7 +174,7 @@ export function useCreateRelationship() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graph'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
     },
   })
 }
@@ -144,7 +194,7 @@ export function useUpdateRelationship() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graph'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
     },
   })
 }
@@ -162,7 +212,7 @@ export function useDeleteRelationship() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graph'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
     },
   })
 }
@@ -196,8 +246,8 @@ export function useCreateCrew() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graph'] })
       queryClient.invalidateQueries({ queryKey: ['crews'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
     },
   })
 }
@@ -217,8 +267,8 @@ export function useUpdateCrew() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graph'] })
       queryClient.invalidateQueries({ queryKey: ['crews'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
     },
   })
 }
@@ -236,8 +286,8 @@ export function useDeleteCrew() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graph'] })
       queryClient.invalidateQueries({ queryKey: ['crews'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
     },
   })
 }
@@ -257,8 +307,9 @@ export function useAddCrewMember() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graph'] })
       queryClient.invalidateQueries({ queryKey: ['crews'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
     },
   })
 }
@@ -278,7 +329,7 @@ export function useCreateCrewRelationship() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graph'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
     },
   })
 }
@@ -298,7 +349,8 @@ export function useCreateCrewMemberRelationship() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['graph'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
     },
   })
 }
+

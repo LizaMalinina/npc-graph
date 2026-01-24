@@ -68,13 +68,17 @@ export default function DetectiveBoard({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  
+  // Zoom and pan state
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [isPanning, setIsPanning] = useState(false)
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 })
+  const [didDrag, setDidDrag] = useState(false)
 
   // Filter nodes and links
   const { filteredNodes, filteredLinks } = useMemo(() => {
     let filteredNodes = [...data.nodes]
-
-    // Note: Character type filtering (showCrewMembersOnly/showNpcsOnly) is now handled 
-    // in DetectiveGraphPage data composition for better performance
 
     // Apply search filter
     if (filters.searchQuery) {
@@ -141,13 +145,43 @@ export default function DetectiveBoard({
     return () => window.removeEventListener('resize', updateDimensions)
   }, [])
 
+  // Handle mouse wheel zoom
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      
+      const rect = container.getBoundingClientRect()
+      const mouseX = e.clientX - rect.left
+      const mouseY = e.clientY - rect.top
+      
+      // Calculate zoom
+      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1
+      const newZoom = Math.max(0.3, Math.min(3, zoom * zoomFactor))
+      
+      // Adjust pan to zoom towards mouse position
+      const zoomRatio = newZoom / zoom
+      const newPanX = mouseX - (mouseX - pan.x) * zoomRatio
+      const newPanY = mouseY - (mouseY - pan.y) * zoomRatio
+      
+      setZoom(newZoom)
+      setPan({ x: newPanX, y: newPanY })
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false })
+    return () => container.removeEventListener('wheel', handleWheel)
+  }, [zoom, pan])
+
   // Calculate initial positions in a circular layout with player group at center
   useEffect(() => {
     if (filteredNodes.length === 0) return
 
     const centerX = dimensions.width / 2
     const centerY = dimensions.height / 2
-    const radius = Math.min(dimensions.width, dimensions.height) * 0.35
+    const outerRadius = Math.min(dimensions.width, dimensions.height) * 0.35
+    const innerRadius = Math.min(dimensions.width, dimensions.height) * 0.18
 
     // Find the node to center: prioritize crew nodes, then player group nodes
     const crewNode = filteredNodes.find(n => n.nodeType === 'crew')
@@ -168,70 +202,117 @@ export default function DetectiveBoard({
         return prevPositions
       }
 
-      console.log('[DetectiveBoard] Calculating positions for', nodesWithoutPositions.length, 'new nodes')
-      
       const newPositions = new Map<string, { x: number; y: number }>(prevPositions)
       
-      // Only position nodes that don't have positions yet
-      nodesWithoutPositions.forEach((node, index) => {
-        // If this is a crew node or the center node, put it in the center
+      // Separate crew members from other nodes
+      const crewMemberNodes = nodesWithoutPositions.filter(n => n.nodeType === 'crew-member')
+      const otherNodes = nodesWithoutPositions.filter(n => 
+        n.nodeType !== 'crew-member' && n.nodeType !== 'crew' && n.id !== centerNodeId
+      )
+      
+      // Position crew/center nodes in the center
+      nodesWithoutPositions.forEach(node => {
         if ((node.nodeType === 'crew' || node.id === centerNodeId) && !newPositions.has(node.id)) {
           newPositions.set(node.id, { x: centerX, y: centerY })
-        } else if (!newPositions.has(node.id)) {
-          // Place in a circle around center
-          const totalNewNodes = nodesWithoutPositions.filter(n => n.nodeType !== 'crew' && n.id !== centerNodeId).length
-          const nonCenterIndex = nodesWithoutPositions
-            .filter(n => n.nodeType !== 'crew' && n.id !== centerNodeId)
-            .indexOf(node)
-          if (nonCenterIndex >= 0) {
-            const angle = (2 * Math.PI * nonCenterIndex) / totalNewNodes - Math.PI / 2
-            const x = centerX + radius * Math.cos(angle)
-            const y = centerY + radius * Math.sin(angle)
-            newPositions.set(node.id, { x, y })
-          }
+        }
+      })
+      
+      // Position crew members in inner circle
+      crewMemberNodes.forEach((node, index) => {
+        if (!newPositions.has(node.id)) {
+          const angle = (2 * Math.PI * index) / crewMemberNodes.length - Math.PI / 2
+          const x = centerX + innerRadius * Math.cos(angle)
+          const y = centerY + innerRadius * Math.sin(angle)
+          newPositions.set(node.id, { x, y })
+        }
+      })
+      
+      // Position other nodes (NPCs) in outer circle
+      otherNodes.forEach((node, index) => {
+        if (!newPositions.has(node.id)) {
+          const angle = (2 * Math.PI * index) / otherNodes.length - Math.PI / 2
+          const x = centerX + outerRadius * Math.cos(angle)
+          const y = centerY + outerRadius * Math.sin(angle)
+          newPositions.set(node.id, { x, y })
         }
       })
 
-      console.log('[DetectiveBoard] Updated positions, total:', newPositions.size)
       return newPositions
     })
   }, [filteredNodes, dimensions])
 
-  // Mouse handlers for dragging
+  // Mouse handlers for dragging nodes
   const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
     e.preventDefault()
+    e.stopPropagation()
+    setDidDrag(false)
     const pos = positions.get(nodeId)
     if (pos) {
       setDraggingNode(nodeId)
-      setDragOffset({
-        x: e.clientX - pos.x,
-        y: e.clientY - pos.y
-      })
+      // Account for zoom and pan when calculating offset
+      const rect = containerRef.current?.getBoundingClientRect()
+      if (rect) {
+        setDragOffset({
+          x: (e.clientX - rect.left - pan.x) / zoom - pos.x,
+          y: (e.clientY - rect.top - pan.y) / zoom - pos.y
+        })
+      }
     }
-  }, [positions])
+  }, [positions, zoom, pan])
+
+  // Handle pan start - ONLY Ctrl+click, otherwise deselect
+  const handleBackgroundMouseDown = useCallback((e: React.MouseEvent) => {
+    // Only pan with Ctrl+left click
+    if (e.button === 0 && e.ctrlKey) {
+      e.preventDefault()
+      setIsPanning(true)
+      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y })
+    } else if (e.button === 0) {
+      // Regular click on background - deselect
+      setSelectedNodeId(null)
+    }
+  }, [pan])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (draggingNode) {
-      setPositions(prev => {
-        const updated = new Map(prev)
-        updated.set(draggingNode, {
-          x: Math.max(60, Math.min(dimensions.width - 60, e.clientX - dragOffset.x)),
-          y: Math.max(60, Math.min(dimensions.height - 60, e.clientY - dragOffset.y))
-        })
-        return updated
+    if (isPanning) {
+      setPan({
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y
       })
+    } else if (draggingNode) {
+      setDidDrag(true)
+      const rect = containerRef.current?.getBoundingClientRect()
+      if (rect) {
+        const newX = (e.clientX - rect.left - pan.x) / zoom - dragOffset.x
+        const newY = (e.clientY - rect.top - pan.y) / zoom - dragOffset.y
+        setPositions(prev => {
+          const updated = new Map(prev)
+          updated.set(draggingNode, { x: newX, y: newY })
+          return updated
+        })
+      }
     }
-  }, [draggingNode, dragOffset, dimensions])
+  }, [isPanning, panStart, draggingNode, dragOffset, zoom, pan])
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    // If we were dragging a node and didn't actually move, treat it as a click
+    if (draggingNode && !didDrag) {
+      const node = filteredNodes.find(n => n.id === draggingNode)
+      if (node) {
+        setSelectedNodeId(node.id)
+        onNodeClick(node)
+      }
+    }
     setDraggingNode(null)
-  }, [])
+    setIsPanning(false)
+    setDidDrag(false)
+  }, [draggingNode, didDrag, filteredNodes, onNodeClick])
 
-  // Handle node click
-  const handleNodeClick = useCallback((node: GraphNode) => {
-    setSelectedNodeId(node.id)
-    onNodeClick(node)
-  }, [onNodeClick])
+  // Handle node click - only used for direct clicks without drag
+  const handleNodeClick = useCallback((e: React.MouseEvent, node: GraphNode) => {
+    e.stopPropagation()
+    // This will be handled by mouseUp if it was a mouseDown without drag
+  }, [])
 
   // Get connected nodes for highlighting
   const connectedNodes = useMemo(() => {
@@ -251,6 +332,7 @@ export default function DetectiveBoard({
     <div 
       ref={containerRef}
       className="detective-board"
+      onMouseDown={handleBackgroundMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
@@ -260,33 +342,118 @@ export default function DetectiveBoard({
         minHeight: '600px',
         position: 'relative',
         overflow: 'hidden',
-        cursor: draggingNode ? 'grabbing' : 'default',
+        cursor: isPanning ? 'grabbing' : draggingNode ? 'grabbing' : 'default',
       }}
     >
       {/* Cork board texture background */}
       <div className="cork-background" />
 
-      {/* SVG for red strings/connections */}
-      <svg 
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{ zIndex: 1 }}
-      >
-        <defs>
-          {/* Glow filter for strings */}
-          <filter id="string-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
+      {/* Zoom controls */}
+      <div className="zoom-controls" style={{
+        position: 'absolute',
+        bottom: '1rem',
+        right: '1rem',
+        zIndex: 100,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.25rem',
+      }}>
+        <button
+          onClick={() => setZoom(z => Math.min(3, z * 1.2))}
+          className="zoom-btn"
+          title="Zoom In"
+          style={{
+            width: '32px',
+            height: '32px',
+            background: 'rgba(45, 74, 58, 0.9)',
+            border: '1px solid #a7f3d0',
+            borderRadius: '4px',
+            color: '#a7f3d0',
+            cursor: 'pointer',
+            fontSize: '1.2rem',
+          }}
+        >+</button>
+        <button
+          onClick={() => setZoom(z => Math.max(0.3, z / 1.2))}
+          className="zoom-btn"
+          title="Zoom Out"
+          style={{
+            width: '32px',
+            height: '32px',
+            background: 'rgba(45, 74, 58, 0.9)',
+            border: '1px solid #a7f3d0',
+            borderRadius: '4px',
+            color: '#a7f3d0',
+            cursor: 'pointer',
+            fontSize: '1.2rem',
+          }}
+        >−</button>
+        <button
+          onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+          className="zoom-btn"
+          title="Reset View"
+          style={{
+            width: '32px',
+            height: '32px',
+            background: 'rgba(45, 74, 58, 0.9)',
+            border: '1px solid #a7f3d0',
+            borderRadius: '4px',
+            color: '#a7f3d0',
+            cursor: 'pointer',
+            fontSize: '0.7rem',
+          }}
+        >Reset</button>
+        <div style={{
+          marginTop: '0.5rem',
+          fontSize: '0.65rem',
+          color: '#a7f3d0',
+          textAlign: 'center',
+          opacity: 0.7,
+          lineHeight: 1.3,
+        }}>
+          Scroll to zoom<br/>
+          Ctrl+drag to pan
+        </div>
+      </div>
 
-        {filteredLinks.map(link => {
-          const sourceId = typeof link.source === 'object' ? (link.source as { id: string }).id : link.source
-          const targetId = typeof link.target === 'object' ? (link.target as { id: string }).id : link.target
-          const sourcePos = positions.get(sourceId)
-          const targetPos = positions.get(targetId)
+      {/* Transformed content container */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transformOrigin: '0 0',
+        }}
+      >
+        {/* SVG for red strings/connections */}
+        <svg 
+          style={{ 
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            zIndex: 5,
+            width: dimensions.width,
+            height: dimensions.height,
+            overflow: 'visible',
+            pointerEvents: 'none',
+          }}
+        >
+          <defs>
+            {/* Glow filter for strings */}
+            <filter id="string-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          {filteredLinks.map(link => {
+            const sourceId = typeof link.source === 'object' ? (link.source as { id: string }).id : link.source
+            const targetId = typeof link.target === 'object' ? (link.target as { id: string }).id : link.target
+            const sourcePos = positions.get(sourceId)
+            const targetPos = positions.get(targetId)
 
           if (!sourcePos || !targetPos) return null
 
@@ -318,10 +485,7 @@ export default function DetectiveBoard({
       {/* Photo nodes */}
       {filteredNodes.map(node => {
         const pos = positions.get(node.id)
-        if (!pos) {
-          console.log('[DetectiveBoard] No position for node:', node.id, node.name)
-          return null
-        }
+        if (!pos) return null
 
         const rotation = getRandomRotation(node.id)
         const isSelected = selectedNodeId === node.id
@@ -350,12 +514,11 @@ export default function DetectiveBoard({
               opacity: isConnected ? 1 : 0.3,
               zIndex: isSelected ? 100 : isHovered ? 50 : isCrew ? 15 : 10,
               transition: draggingNode === node.id ? 'none' : 'transform 0.2s ease, opacity 0.3s ease, z-index 0s',
-              cursor: draggingNode === node.id ? 'grabbing' : 'grab',
+              cursor: draggingNode === node.id ? 'grabbing' : 'pointer',
             }}
             onMouseDown={(e) => handleMouseDown(e, node.id)}
             onMouseEnter={() => setHoveredNode(node.id)}
             onMouseLeave={() => setHoveredNode(null)}
-            onClick={() => handleNodeClick(node)}
           >
             {/* Push pin */}
             <div 
@@ -404,6 +567,7 @@ export default function DetectiveBoard({
           </div>
         )
       })}
+      </div>
 
       {/* Decorative elements */}
       <div className="board-decorations">
@@ -413,13 +577,6 @@ export default function DetectiveBoard({
         <div className="corner-tack bottom-left" />
         <div className="corner-tack bottom-right" />
       </div>
-
-      {/* Click to deselect */}
-      <div 
-        className="absolute inset-0"
-        style={{ zIndex: 0 }}
-        onClick={() => setSelectedNodeId(null)}
-      />
     </div>
   )
 }

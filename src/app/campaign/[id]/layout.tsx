@@ -1,6 +1,6 @@
 import './detective.css'
 
-export default function DetectiveLayout({
+export default function CampaignLayout({
   children,
 }: {
   children: React.ReactNode

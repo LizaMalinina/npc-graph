@@ -53,6 +53,7 @@ export async function PUT(
         tags: body.tags,
         posX: body.posX,
         posY: body.posY,
+        campaignId: body.campaignId,
       },
     })
     

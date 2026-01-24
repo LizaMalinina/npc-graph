@@ -21,6 +21,23 @@ model User {
   updatedAt     DateTime  @updatedAt
 }
 
+// Campaign model - represents a game/story campaign
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Each campaign has one crew
+  crew        Crew?
+  // NPCs in this campaign
+  npcs        Npc[]
+}
+
 // NPC model
 model Npc {
   id          String   @id @default(cuid())
@@ -36,6 +53,10 @@ model Npc {
   // Graph position (for persisting layout)
   posX        Float?
   posY        Float?
+  
+  // Campaign this NPC belongs to
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -86,6 +107,10 @@ model Crew {
   name        String
   description String?
   imageUrl    String?
+  
+  // Link to campaign
+  campaignId  String?      @unique
+  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt

@@ -5,7 +5,27 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
-  // Create sample NPCs
+  // Create a default campaign with a crew
+  const campaign = await prisma.campaign.create({
+    data: {
+      name: 'The Realm of Eldoria',
+      description: 'A fantasy world of magic, intrigue, and adventure',
+      isActive: true,
+      crew: {
+        create: {
+          name: 'The Heroes of Eldoria',
+          description: 'The adventuring party exploring the realm',
+        }
+      }
+    },
+    include: {
+      crew: true
+    }
+  })
+
+  console.log(`Created campaign: ${campaign.name}`)
+
+  // Create sample NPCs linked to the campaign
   const npcs = await Promise.all([
     prisma.npc.create({
       data: {
@@ -16,6 +36,7 @@ async function main() {
         location: 'Tower of Stars',
         status: 'alive',
         tags: 'magic,leader,quest-giver',
+        campaignId: campaign.id,
       },
     }),
     prisma.npc.create({
@@ -27,6 +48,7 @@ async function main() {
         location: 'Unknown',
         status: 'alive',
         tags: 'stealth,dangerous,informant',
+        campaignId: campaign.id,
       },
     }),
     prisma.npc.create({
@@ -38,6 +60,7 @@ async function main() {
         location: 'Ironforge District',
         status: 'alive',
         tags: 'merchant,crafter,friendly',
+        campaignId: campaign.id,
       },
     }),
     prisma.npc.create({
@@ -49,6 +72,7 @@ async function main() {
         location: 'Castle Valdris',
         status: 'alive',
         tags: 'noble,politics,wealthy',
+        campaignId: campaign.id,
       },
     }),
     prisma.npc.create({
@@ -60,6 +84,7 @@ async function main() {
         location: 'Northern Wastes',
         status: 'alive',
         tags: 'warrior,leader,former-enemy',
+        campaignId: campaign.id,
       },
     }),
     prisma.npc.create({
@@ -71,6 +96,7 @@ async function main() {
         location: 'Grand Cathedral',
         status: 'alive',
         tags: 'healer,religious,quest-giver',
+        campaignId: campaign.id,
       },
     }),
     prisma.npc.create({
@@ -82,6 +108,7 @@ async function main() {
         location: 'The Undercity',
         status: 'alive',
         tags: 'informant,mysterious,neutral',
+        campaignId: campaign.id,
       },
     }),
     prisma.npc.create({
@@ -93,6 +120,7 @@ async function main() {
         location: 'Guard Barracks',
         status: 'alive',
         tags: 'military,lawful,quest-giver',
+        campaignId: campaign.id,
       },
     }),
     // Additional NPCs for faction comparison
@@ -105,6 +133,7 @@ async function main() {
         location: 'Tower of Stars',
         status: 'alive',
         tags: 'magic,enchanting,curious',
+        campaignId: campaign.id,
       },
     }),
     prisma.npc.create({
@@ -116,6 +145,7 @@ async function main() {
         location: 'Guard Barracks',
         status: 'alive',
         tags: 'military,loyal,patrol',
+        campaignId: campaign.id,
       },
     }),
     prisma.npc.create({
@@ -127,6 +157,7 @@ async function main() {
         location: 'Castle Valdris',
         status: 'alive',
         tags: 'noble,ambitious,schemer',
+        campaignId: campaign.id,
       },
     }),
   ])
@@ -291,16 +322,18 @@ async function main() {
 
   console.log(`Created ${relationships.length} relationships`)
 
-  // Create the player's crew (party)
-  const crew = await prisma.crew.create({
+  // Use the crew that was created with the campaign
+  const crew = campaign.crew!
+
+  // Update the crew with additional details
+  await prisma.crew.update({
+    where: { id: crew.id },
     data: {
-      name: 'The Iron Wolves',
-      description: 'A band of adventurers seeking fortune and justice in the realm',
-      imageUrl: 'https://api.dicebear.com/7.x/shapes/svg?seed=IronWolves&backgroundColor=3A5F4B',
+      imageUrl: 'https://api.dicebear.com/7.x/shapes/svg?seed=HeroesOfEldoria&backgroundColor=3A5F4B',
     },
   })
 
-  console.log(`Created crew: ${crew.name}`)
+  console.log(`Using campaign crew: ${crew.name}`)
 
   // Create crew members
   const crewMembers = await Promise.all([

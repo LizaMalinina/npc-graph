@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
         tags: body.tags,
         posX: body.posX,
         posY: body.posY,
+        campaignId: body.campaignId,
       },
     })
     return NextResponse.json(npc, { status: 201 })

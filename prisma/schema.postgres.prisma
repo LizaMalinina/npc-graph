@@ -22,6 +22,24 @@ model User {
   updatedAt     DateTime  @updatedAt
 }
 
+// Campaign model - organizes NPCs, crews, and relationships
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Each campaign has one crew (the party)
+  crew        Crew?
+  
+  // NPCs in this campaign
+  npcs        Npc[]
+}
+
 // NPC model
 model Npc {
   id          String   @id @default(cuid())
@@ -33,6 +51,10 @@ model Npc {
   location    String?  // For filtering
   status      String   @default("alive") // alive, dead, unknown
   tags        String?  // Comma-separated tags for filtering
+  
+  // Campaign this NPC belongs to
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   
   // Graph position (for persisting layout)
   posX        Float?
@@ -70,7 +92,7 @@ model Relationship {
   @@unique([fromNpcId, toNpcId, type])
 }
 
-// Session model for campaigns/settings
+// Session model for campaigns/settings (deprecated - use Campaign)
 model Session {
   id          String   @id @default(cuid())
   name        String
@@ -87,6 +109,10 @@ model Crew {
   name        String
   description String?
   imageUrl    String?
+  
+  // Campaign this crew belongs to (one crew per campaign)
+  campaignId  String?      @unique
+  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt

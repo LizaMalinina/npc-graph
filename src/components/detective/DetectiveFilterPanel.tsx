@@ -75,14 +75,12 @@ export default function DetectiveFilterPanel({
     filters.showNpcsOnly
 
   const toggleCharacterTypeFilter = (type: 'crew' | 'npc') => {
-    console.log('[FilterPanel] toggleCharacterTypeFilter called with:', type)
     if (type === 'crew') {
       const newFilters = {
         ...filters,
         showCrewMembersOnly: !filters.showCrewMembersOnly,
         showNpcsOnly: false, // Can't have both
       }
-      console.log('[FilterPanel] Setting filters to:', newFilters)
       onFiltersChange(newFilters)
     } else {
       onFiltersChange({
