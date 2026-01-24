@@ -2,30 +2,119 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCampaigns, useCreateCampaign } from '@/hooks/useApi'
+import { useCampaigns, useCreateCampaign, useDeleteCampaign, useUpdateCampaign, useUpdateCrew } from '@/hooks/useApi'
+import { Campaign } from '@/types'
 
 export default function Home() {
   const router = useRouter()
   const { data: campaigns, isLoading } = useCampaigns()
   const createCampaign = useCreateCampaign()
+  const deleteCampaign = useDeleteCampaign()
+  const updateCampaign = useUpdateCampaign()
+  const updateCrew = useUpdateCrew()
+  
+  // Create modal state
   const [showNewCampaign, setShowNewCampaign] = useState(false)
   const [newCampaignName, setNewCampaignName] = useState('')
   const [newCampaignDescription, setNewCampaignDescription] = useState('')
-  const [crewName, setCrewName] = useState('The Party')
+  const [newCrewName, setNewCrewName] = useState('The Party')
+  const [createError, setCreateError] = useState<string | null>(null)
+  
+  // Edit modal state
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editCrewName, setEditCrewName] = useState('')
+  const [editImageUrl, setEditImageUrl] = useState('')
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newCampaignName.trim()) return
+    
+    // Check for duplicate name
+    const existingCampaign = campaigns?.find(
+      c => c.name.toLowerCase() === newCampaignName.trim().toLowerCase()
+    )
+    if (existingCampaign) {
+      setCreateError('A campaign with this name already exists. Please choose a different name.')
+      return
+    }
 
     try {
+      setCreateError(null)
       const campaign = await createCampaign.mutateAsync({
-        name: newCampaignName,
+        name: newCampaignName.trim(),
         description: newCampaignDescription || undefined,
-        crewName: crewName || 'The Party',
+        crewName: newCrewName || 'The Party',
       })
+      setShowNewCampaign(false)
+      setNewCampaignName('')
+      setNewCampaignDescription('')
+      setNewCrewName('The Party')
       router.push(`/campaign/${campaign.id}`)
     } catch (error) {
       console.error('Failed to create campaign:', error)
+      setCreateError('Failed to create campaign. Please try again.')
+    }
+  }
+
+  const openEditModal = (campaign: Campaign) => {
+    setEditingCampaign(campaign)
+    setEditName(campaign.name)
+    setEditDescription(campaign.description || '')
+    setEditCrewName(campaign.crew?.name || '')
+    setEditImageUrl(campaign.imageUrl || '')
+  }
+
+  const closeEditModal = () => {
+    setEditingCampaign(null)
+    setEditName('')
+    setEditDescription('')
+    setEditCrewName('')
+    setEditImageUrl('')
+  }
+
+  const handleUpdateCampaign = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingCampaign || !editName.trim()) return
+
+    try {
+      // Update campaign
+      await updateCampaign.mutateAsync({
+        id: editingCampaign.id,
+        name: editName.trim(),
+        description: editDescription || undefined,
+        imageUrl: editImageUrl || undefined,
+      })
+      
+      // Update crew name if changed
+      if (editingCampaign.crew && editCrewName.trim() && editCrewName !== editingCampaign.crew.name) {
+        await updateCrew.mutateAsync({
+          id: editingCampaign.crew.id,
+          data: { name: editCrewName.trim() },
+        })
+      }
+      
+      closeEditModal()
+    } catch (error) {
+      console.error('Failed to update campaign:', error)
+      alert('Failed to update campaign. Please try again.')
+    }
+  }
+
+  const handleDeleteCampaign = async () => {
+    if (!editingCampaign) return
+    
+    if (!confirm(`Are you sure you want to delete "${editingCampaign.name}"?\n\nThis will permanently delete all NPCs, relationships, and data associated with this campaign. This action cannot be undone.`)) {
+      return
+    }
+    
+    try {
+      await deleteCampaign.mutateAsync(editingCampaign.id)
+      closeEditModal()
+    } catch (error) {
+      console.error('Failed to delete campaign:', error)
+      alert('Failed to delete campaign. Please try again.')
     }
   }
 
@@ -49,23 +138,41 @@ export default function Home() {
 
       <div className="campaign-grid">
         {campaigns?.map(campaign => (
-          <button
-            key={campaign.id}
-            onClick={() => router.push(`/campaign/${campaign.id}`)}
-            className="campaign-card"
-          >
-            <div className="campaign-card-icon">📜</div>
-            <h2>{campaign.name}</h2>
-            {campaign.description && <p>{campaign.description}</p>}
-            <div className="campaign-meta">
-              <span>👥 {campaign.crew?.name || 'No crew'}</span>
-              <span>🎭 {campaign._count?.npcs || 0} NPCs</span>
-            </div>
-          </button>
+          <div key={campaign.id} className="campaign-card-wrapper">
+            <button
+              onClick={() => router.push(`/campaign/${campaign.id}`)}
+              className="campaign-card"
+            >
+              <div className="campaign-card-icon">
+                {campaign.imageUrl ? (
+                  <img src={campaign.imageUrl} alt="" className="campaign-icon-img" />
+                ) : '📜'}
+              </div>
+              <h2>{campaign.name}</h2>
+              {campaign.description && <p>{campaign.description}</p>}
+              <div className="campaign-meta">
+                <span>👥 {campaign.crew?.name || 'No crew'}</span>
+                <span>🎭 {campaign._count?.npcs || 0} NPCs</span>
+              </div>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                openEditModal(campaign)
+              }}
+              className="campaign-edit-btn"
+              title="Edit campaign"
+            >
+              ⚙️
+            </button>
+          </div>
         ))}
 
         <button
-          onClick={() => setShowNewCampaign(true)}
+          onClick={() => {
+            setCreateError(null)
+            setShowNewCampaign(true)
+          }}
           className="campaign-card new-campaign"
         >
           <div className="campaign-card-icon">➕</div>
@@ -80,13 +187,20 @@ export default function Home() {
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h2>🗺️ Create New Campaign</h2>
             <form onSubmit={handleCreateCampaign}>
+              {createError && (
+                <div className="form-error">{createError}</div>
+              )}
+              
               <div className="form-group">
                 <label htmlFor="campaignName">Campaign Name *</label>
                 <input
                   id="campaignName"
                   type="text"
                   value={newCampaignName}
-                  onChange={e => setNewCampaignName(e.target.value)}
+                  onChange={e => {
+                    setNewCampaignName(e.target.value)
+                    setCreateError(null)
+                  }}
                   placeholder="e.g., Curse of Strahd"
                   required
                 />
@@ -108,8 +222,8 @@ export default function Home() {
                 <input
                   id="crewName"
                   type="text"
-                  value={crewName}
-                  onChange={e => setCrewName(e.target.value)}
+                  value={newCrewName}
+                  onChange={e => setNewCrewName(e.target.value)}
                   placeholder="e.g., The Iron Wolves"
                 />
                 <small>A crew will be automatically created for your party</small>
@@ -122,6 +236,85 @@ export default function Home() {
                 <button type="submit" disabled={createCampaign.isPending} className="btn-primary">
                   {createCampaign.isPending ? 'Creating...' : 'Create Campaign'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Campaign Modal */}
+      {editingCampaign && (
+        <div className="modal-overlay" onClick={closeEditModal}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h2>⚙️ Edit Campaign</h2>
+            <form onSubmit={handleUpdateCampaign}>
+              <div className="form-group">
+                <label htmlFor="editName">Campaign Name *</label>
+                <input
+                  id="editName"
+                  type="text"
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  placeholder="Campaign name"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="editDescription">Description</label>
+                <textarea
+                  id="editDescription"
+                  value={editDescription}
+                  onChange={e => setEditDescription(e.target.value)}
+                  placeholder="A brief description of your campaign..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="editCrewName">Party/Crew Name</label>
+                <input
+                  id="editCrewName"
+                  type="text"
+                  value={editCrewName}
+                  onChange={e => setEditCrewName(e.target.value)}
+                  placeholder="e.g., The Iron Wolves"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="editImageUrl">Campaign Icon URL</label>
+                <input
+                  id="editImageUrl"
+                  type="url"
+                  value={editImageUrl}
+                  onChange={e => setEditImageUrl(e.target.value)}
+                  placeholder="https://example.com/image.png"
+                />
+                <small>Optional: URL to an image for the campaign card</small>
+              </div>
+
+              <div className="form-actions edit-actions">
+                <button 
+                  type="button" 
+                  onClick={handleDeleteCampaign} 
+                  className="btn-danger"
+                  disabled={deleteCampaign.isPending}
+                >
+                  {deleteCampaign.isPending ? 'Deleting...' : '🗑️ Delete'}
+                </button>
+                <div className="form-actions-right">
+                  <button type="button" onClick={closeEditModal} className="btn-secondary">
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={updateCampaign.isPending || updateCrew.isPending} 
+                    className="btn-primary"
+                  >
+                    {updateCampaign.isPending || updateCrew.isPending ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

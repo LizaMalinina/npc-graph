@@ -13,6 +13,18 @@ A web application for managing and visualizing NPC (Non-Playable Character) rela
 - 🔐 **Role-Based Access** - Viewer, Editor, and Admin roles
 - 💾 **Persistent Storage** - SQLite (local) or PostgreSQL (production)
 - 🐳 **Docker Support** - Run everything in containers
+- ☁️ **Azure Deployment** - Ready for Azure Container Apps
+- 📸 **Image Upload** - Azure Blob Storage integration for NPC portraits
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DATABASE_URL` | PostgreSQL connection string (pooled) | Yes (prod) |
+| `DIRECT_URL` | PostgreSQL direct connection for migrations | Yes (prod) |
+| `AZURE_STORAGE_CONNECTION_STRING` | Azure Blob Storage connection | For images |
+| `AZURE_STORAGE_CONTAINER_NAME` | Blob container name (default: `npc-images`) | For images |
+| `NODE_ENV` | Environment (`development` / `production`) | No |
 
 ## Architecture
 
@@ -92,10 +104,60 @@ erDiagram
 ## Quick Start with Docker
 
 ```bash
-# Start the application
+# Start the application (development with SQLite)
 docker-compose up --build
 
 # The app will be available at http://localhost:3000
+```
+
+## Production Docker Build
+
+```bash
+# Build production image (uses PostgreSQL)
+docker build -f Dockerfile.prod -t npc-graph:latest .
+
+# Run with external PostgreSQL database
+docker run --rm \
+  -e DATABASE_URL="postgresql://user:pass@host/db" \
+  -e NODE_ENV=production \
+  -p 3000:3000 \
+  npc-graph:latest
+
+# Test locally with Neon database
+docker run --rm \
+  -e DATABASE_URL="postgresql://...@neon.tech/neondb?sslmode=require" \
+  -p 3000:3000 \
+  npc-graph:latest
+```
+
+## Azure Deployment
+
+Deploy to Azure Container Apps using the provided scripts:
+
+### PowerShell (Windows)
+```powershell
+.\scripts\deploy-azure.ps1
+```
+
+### Bash (Linux/Mac)
+```bash
+chmod +x scripts/deploy-azure.sh
+./scripts/deploy-azure.sh
+```
+
+### What the script does:
+1. Creates Azure Resource Group
+2. Creates Azure Container Registry (ACR)
+3. Builds and pushes Docker image to ACR
+4. Creates Container Apps environment
+5. Deploys the container app with external ingress
+
+### Post-deployment configuration:
+```bash
+az containerapp update --name npc-graph --resource-group npc-graph-rg --set-env-vars \
+  DATABASE_URL='your-neon-connection-string' \
+  AZURE_STORAGE_CONNECTION_STRING='your-storage-connection-string' \
+  AZURE_STORAGE_CONTAINER_NAME='npc-images'
 ```
 
 ## User Flow
@@ -149,8 +211,13 @@ npc-graph/
 ├── prisma/
 │   ├── schema.prisma           # Database schema
 │   └── seed.ts
-├── Dockerfile
-├── docker-compose.yml
+├── Dockerfile              # Development Docker
+├── Dockerfile.prod         # Production Docker (multi-stage)
+├── docker-compose.yml      # Local development
+├── docker-compose.postgres.yml  # Local PostgreSQL dev
+├── scripts/
+│   ├── deploy-azure.ps1    # Windows deployment
+│   └── deploy-azure.sh     # Linux/Mac deployment
 └── package.json
 ```
 
@@ -188,7 +255,26 @@ npc-graph/
 |--------|----------|-------------|
 | GET | `/api/crews` | List all crews |
 | GET | `/api/crews/:id` | Get crew details |
+| PUT | `/api/crews/:id` | Update crew |
+| DELETE | `/api/crews/:id` | Delete crew |
 | POST | `/api/crews/:id/members` | Add crew member |
+
+### Crew Relationships
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/crew-relationships` | List crew relationships |
+| POST | `/api/crew-relationships` | Create crew relationship |
+
+### Crew Member Relationships
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/crew-member-relationships` | List member relationships |
+| POST | `/api/crew-member-relationships` | Create member relationship |
+
+### Upload
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/upload` | Upload image to Azure Blob Storage |
 
 ## Relationship Types
 
@@ -235,7 +321,7 @@ npm run dev
 
 - [ ] Full authentication with NextAuth.js
 - [ ] Export/Import data (JSON/CSV)
-- [ ] Image upload for NPC portraits
+- [x] Image upload for NPC portraits
 - [ ] Collaborative real-time editing
 - [ ] Timeline view for relationship changes
 - [ ] Mobile-responsive design and touch support

@@ -95,6 +95,7 @@ export interface GraphNode {
   id: string
   name: string
   title?: string | null
+  description?: string | null
   imageUrl?: string | null
   faction?: string | null
   location?: string | null

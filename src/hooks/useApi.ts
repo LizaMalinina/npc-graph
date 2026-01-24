@@ -52,6 +52,44 @@ export function useCreateCampaign() {
   })
 }
 
+// Delete campaign
+export function useDeleteCampaign() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/campaigns/${id}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('Failed to delete campaign')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'], refetchType: 'active' })
+    },
+  })
+}
+
+// Update campaign
+export function useUpdateCampaign() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string; imageUrl?: string }) => {
+      const res = await fetch(`${API_BASE}/campaigns/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to update campaign')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'], refetchType: 'active' })
+    },
+  })
+}
+
 // Fetch graph data for a campaign
 export function useCampaignGraphData(campaignId: string) {
   return useQuery<GraphData & { campaign: { id: string; name: string; description?: string } }>({

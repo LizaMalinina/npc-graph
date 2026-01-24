@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { BlobServiceClient } from '@azure/storage-blob'
+import { BlobServiceClient, BlobSASPermissions, generateBlobSASQueryParameters, StorageSharedKeyCredential } from '@azure/storage-blob'
 import { v4 as uuidv4 } from 'uuid'
 
 // Azure Blob Storage configuration
@@ -10,12 +10,55 @@ const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME || 'npc-images'
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const MAX_SIZE = 5 * 1024 * 1024 // 5MB
 
+// Parse connection string to get account name and key
+function parseConnectionString(connStr: string): { accountName: string; accountKey: string } | null {
+  const accountNameMatch = connStr.match(/AccountName=([^;]+)/)
+  const accountKeyMatch = connStr.match(/AccountKey=([^;]+)/)
+  
+  if (accountNameMatch && accountKeyMatch) {
+    return {
+      accountName: accountNameMatch[1],
+      accountKey: accountKeyMatch[1]
+    }
+  }
+  return null
+}
+
+// Generate a SAS URL for a blob that expires in 10 years
+function generateSasUrl(
+  blobClient: ReturnType<ReturnType<BlobServiceClient['getContainerClient']>['getBlockBlobClient']>,
+  accountName: string,
+  accountKey: string,
+  containerName: string,
+  blobName: string
+): string {
+  const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey)
+  
+  const sasToken = generateBlobSASQueryParameters({
+    containerName,
+    blobName,
+    permissions: BlobSASPermissions.parse('r'), // Read only
+    startsOn: new Date(),
+    expiresOn: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000), // 10 years
+  }, sharedKeyCredential).toString()
+  
+  return `${blobClient.url}?${sasToken}`
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check if Azure storage is configured
     if (!connectionString) {
       return NextResponse.json(
         { error: 'Azure Storage not configured' },
+        { status: 500 }
+      )
+    }
+
+    const credentials = parseConnectionString(connectionString)
+    if (!credentials) {
+      return NextResponse.json(
+        { error: 'Invalid Azure Storage connection string' },
         { status: 500 }
       )
     }
@@ -42,7 +85,7 @@ export async function POST(request: NextRequest) {
     if (file.size > MAX_SIZE) {
       return NextResponse.json(
         { error: 'File too large. Maximum size: 5MB' },
-        { status: 400 }
+        { status: 500 }
       )
     }
 
@@ -50,10 +93,8 @@ export async function POST(request: NextRequest) {
     const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString)
     const containerClient = blobServiceClient.getContainerClient(containerName)
 
-    // Ensure container exists
-    await containerClient.createIfNotExists({
-      access: 'blob' // Public read access for blobs
-    })
+    // Ensure container exists (without public access requirement)
+    await containerClient.createIfNotExists()
 
     // Generate unique filename
     const extension = file.name.split('.').pop() || 'png'
@@ -70,8 +111,14 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Return the public URL
-    const url = blockBlobClient.url
+    // Generate a SAS URL for secure access
+    const url = generateSasUrl(
+      blockBlobClient,
+      credentials.accountName,
+      credentials.accountKey,
+      containerName,
+      blobName
+    )
 
     return NextResponse.json({ url })
   } catch (error) {
