@@ -259,9 +259,13 @@ export default function DetectiveBoard({
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Fit all nodes in view on initial load
+  // Fit all nodes in view on initial load - only runs once when positions are first set
   useEffect(() => {
+    // Only run when we just set positions for the first time
     if (hasInitializedView.current || positions.size === 0 || dimensions.width === 0) return
+    
+    // Mark as initialized immediately to prevent re-runs
+    hasInitializedView.current = true
     
     // Calculate bounding box of all nodes
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
@@ -289,7 +293,7 @@ export default function DetectiveBoard({
     
     const scaleX = availableWidth / contentWidth
     const scaleY = availableHeight / contentHeight
-    const fitZoom = Math.min(scaleX, scaleY, 1) // Don't zoom in past 1x
+    const fitZoom = Math.max(0.5, Math.min(scaleX, scaleY, 1)) // Clamp between 0.5 and 1
     
     // Calculate pan to center the content
     const contentCenterX = (minX + maxX) / 2
@@ -302,8 +306,7 @@ export default function DetectiveBoard({
     
     setZoom(fitZoom)
     setPan({ x: panX, y: panY })
-    hasInitializedView.current = true
-  }, [positions, dimensions])
+  }, [positions.size, dimensions.width, dimensions.height]) // Only depend on size/dimensions, not the map itself
 
   // Mouse handlers for dragging nodes
   const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
@@ -537,73 +540,75 @@ export default function DetectiveBoard({
       {/* Cork board texture background */}
       <div className="cork-background" />
 
-      {/* Zoom controls */}
-      <div className="zoom-controls" style={{
-        position: 'absolute',
-        bottom: '1rem',
-        right: '1rem',
-        zIndex: 100,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.25rem',
-      }}>
-        <button
-          onClick={() => setZoom(z => Math.min(3, z * 1.2))}
-          className="zoom-btn"
-          title="Zoom In"
-          style={{
-            width: '32px',
-            height: '32px',
-            background: 'rgba(45, 74, 58, 0.9)',
-            border: '1px solid #a7f3d0',
-            borderRadius: '4px',
-            color: '#a7f3d0',
-            cursor: 'pointer',
-            fontSize: '1.2rem',
-          }}
-        >+</button>
-        <button
-          onClick={() => setZoom(z => Math.max(0.3, z / 1.2))}
-          className="zoom-btn"
-          title="Zoom Out"
-          style={{
-            width: '32px',
-            height: '32px',
-            background: 'rgba(45, 74, 58, 0.9)',
-            border: '1px solid #a7f3d0',
-            borderRadius: '4px',
-            color: '#a7f3d0',
-            cursor: 'pointer',
-            fontSize: '1.2rem',
-          }}
-        >−</button>
-        <button
-          onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
-          className="zoom-btn"
-          title="Reset View"
-          style={{
-            width: '32px',
-            height: '32px',
-            background: 'rgba(45, 74, 58, 0.9)',
-            border: '1px solid #a7f3d0',
-            borderRadius: '4px',
-            color: '#a7f3d0',
-            cursor: 'pointer',
-            fontSize: '0.7rem',
-          }}
-        >Reset</button>
-        <div style={{
-          marginTop: '0.5rem',
-          fontSize: '0.65rem',
-          color: '#a7f3d0',
-          textAlign: 'center',
-          opacity: 0.7,
-          lineHeight: 1.3,
+      {/* Zoom controls - hidden on mobile */}
+      {!isMobile && (
+        <div className="zoom-controls" style={{
+          position: 'absolute',
+          bottom: '1rem',
+          right: '1rem',
+          zIndex: 100,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.25rem',
         }}>
-          Scroll to zoom<br/>
-          Ctrl+drag to pan
+          <button
+            onClick={() => setZoom(z => Math.min(3, z * 1.2))}
+            className="zoom-btn"
+            title="Zoom In"
+            style={{
+              width: '32px',
+              height: '32px',
+              background: 'rgba(45, 74, 58, 0.9)',
+              border: '1px solid #a7f3d0',
+              borderRadius: '4px',
+              color: '#a7f3d0',
+              cursor: 'pointer',
+              fontSize: '1.2rem',
+            }}
+          >+</button>
+          <button
+            onClick={() => setZoom(z => Math.max(0.3, z / 1.2))}
+            className="zoom-btn"
+            title="Zoom Out"
+            style={{
+              width: '32px',
+              height: '32px',
+              background: 'rgba(45, 74, 58, 0.9)',
+              border: '1px solid #a7f3d0',
+              borderRadius: '4px',
+              color: '#a7f3d0',
+              cursor: 'pointer',
+              fontSize: '1.2rem',
+            }}
+          >−</button>
+          <button
+            onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+            className="zoom-btn"
+            title="Reset View"
+            style={{
+              width: '32px',
+              height: '32px',
+              background: 'rgba(45, 74, 58, 0.9)',
+              border: '1px solid #a7f3d0',
+              borderRadius: '4px',
+              color: '#a7f3d0',
+              cursor: 'pointer',
+              fontSize: '0.7rem',
+            }}
+          >Reset</button>
+          <div style={{
+            marginTop: '0.5rem',
+            fontSize: '0.65rem',
+            color: '#a7f3d0',
+            textAlign: 'center',
+            opacity: 0.7,
+            lineHeight: 1.3,
+          }}>
+            Scroll to zoom<br/>
+            Ctrl+drag to pan
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Transformed content container */}
       <div
