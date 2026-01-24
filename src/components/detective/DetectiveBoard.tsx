@@ -78,6 +78,11 @@ export default function DetectiveBoard({
   // Track mouse position for click vs drag detection
   const mouseDownPos = useRef<{ x: number; y: number } | null>(null)
   const DRAG_THRESHOLD = 5 // pixels - if mouse moves less than this, it's a click
+  
+  // Touch state for pinch zoom and touch interactions
+  const lastTouchDistance = useRef<number | null>(null)
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null)
+  const touchNodeId = useRef<string | null>(null)
 
   // Filter nodes and links
   const { filteredNodes, filteredLinks } = useMemo(() => {
@@ -322,6 +327,122 @@ export default function DetectiveBoard({
     // This will be handled by mouseUp if it was a mouseDown without drag
   }, [])
 
+  // Touch handlers for mobile support
+  const handleTouchStart = useCallback((e: React.TouchEvent, nodeId?: string) => {
+    if (e.touches.length === 2) {
+      // Pinch zoom - calculate initial distance between fingers
+      const touch1 = e.touches[0]
+      const touch2 = e.touches[1]
+      const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY)
+      lastTouchDistance.current = distance
+    } else if (e.touches.length === 1) {
+      const touch = e.touches[0]
+      touchStartPos.current = { x: touch.clientX, y: touch.clientY }
+      
+      if (nodeId) {
+        // Touch on a node - prepare for drag
+        touchNodeId.current = nodeId
+        const pos = positions.get(nodeId)
+        if (pos) {
+          const rect = containerRef.current?.getBoundingClientRect()
+          if (rect) {
+            setDragOffset({
+              x: (touch.clientX - rect.left - pan.x) / zoom - pos.x,
+              y: (touch.clientY - rect.top - pan.y) / zoom - pos.y
+            })
+            setDraggingNode(nodeId)
+          }
+        }
+      } else {
+        // Touch on background - prepare for pan
+        setPanStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y })
+        setIsPanning(true)
+      }
+    }
+  }, [positions, zoom, pan])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // Pinch zoom
+      e.preventDefault()
+      const touch1 = e.touches[0]
+      const touch2 = e.touches[1]
+      const distance = Math.hypot(touch2.clientX - touch1.clientX, touch2.clientY - touch1.clientY)
+      
+      if (lastTouchDistance.current !== null) {
+        const scale = distance / lastTouchDistance.current
+        const newZoom = Math.max(0.3, Math.min(3, zoom * scale))
+        
+        // Center of pinch
+        const centerX = (touch1.clientX + touch2.clientX) / 2
+        const centerY = (touch1.clientY + touch2.clientY) / 2
+        const rect = containerRef.current?.getBoundingClientRect()
+        if (rect) {
+          const mouseX = centerX - rect.left
+          const mouseY = centerY - rect.top
+          const zoomRatio = newZoom / zoom
+          const newPanX = mouseX - (mouseX - pan.x) * zoomRatio
+          const newPanY = mouseY - (mouseY - pan.y) * zoomRatio
+          
+          setZoom(newZoom)
+          setPan({ x: newPanX, y: newPanY })
+        }
+      }
+      lastTouchDistance.current = distance
+    } else if (e.touches.length === 1) {
+      const touch = e.touches[0]
+      
+      if (draggingNode) {
+        // Dragging a node
+        e.preventDefault()
+        const rect = containerRef.current?.getBoundingClientRect()
+        if (rect) {
+          const newX = (touch.clientX - rect.left - pan.x) / zoom - dragOffset.x
+          const newY = (touch.clientY - rect.top - pan.y) / zoom - dragOffset.y
+          setPositions(prev => {
+            const updated = new Map(prev)
+            updated.set(draggingNode, { x: newX, y: newY })
+            return updated
+          })
+        }
+      } else if (isPanning) {
+        // Panning the board
+        setPan({
+          x: touch.clientX - panStart.x,
+          y: touch.clientY - panStart.y
+        })
+      }
+    }
+  }, [zoom, pan, draggingNode, isPanning, dragOffset, panStart])
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    // Check if this was a tap (minimal movement) vs a drag
+    if (e.changedTouches.length > 0 && touchStartPos.current) {
+      const touch = e.changedTouches[0]
+      const wasTap = 
+        Math.abs(touch.clientX - touchStartPos.current.x) < DRAG_THRESHOLD &&
+        Math.abs(touch.clientY - touchStartPos.current.y) < DRAG_THRESHOLD
+      
+      if (wasTap && touchNodeId.current) {
+        const node = filteredNodes.find(n => n.id === touchNodeId.current)
+        if (node) {
+          setSelectedNodeId(node.id)
+          onNodeClick(node)
+        }
+      } else if (wasTap && !touchNodeId.current) {
+        // Tap on background - deselect
+        setSelectedNodeId(null)
+      }
+    }
+    
+    // Reset all touch state
+    lastTouchDistance.current = null
+    touchStartPos.current = null
+    touchNodeId.current = null
+    setDraggingNode(null)
+    setIsPanning(false)
+  }, [filteredNodes, onNodeClick])
+
   // Get connected nodes for highlighting
   const connectedNodes = useMemo(() => {
     if (!selectedNodeId) return new Set<string>()
@@ -344,6 +465,9 @@ export default function DetectiveBoard({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onTouchStart={(e) => handleTouchStart(e)}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       style={{
         width: '100%',
         height: '100%',
@@ -351,6 +475,7 @@ export default function DetectiveBoard({
         position: 'relative',
         overflow: 'hidden',
         cursor: isPanning ? 'grabbing' : draggingNode ? 'grabbing' : 'default',
+        touchAction: 'none', // Prevent default touch behaviors
       }}
     >
       {/* Cork board texture background */}

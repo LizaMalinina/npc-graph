@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import DetectiveBoard from '@/components/detective/DetectiveBoard'
 import DetectiveFilterPanel from '@/components/detective/DetectiveFilterPanel'
@@ -31,6 +31,30 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const [userRole, setUserRole] = useState<'viewer' | 'editor' | 'admin'>('editor')
   const canEdit = userRole === 'editor' || userRole === 'admin'
 
+  // Mobile detection and responsive states
+  const [isMobile, setIsMobile] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
+
+  // Detect mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Close mobile panels when selecting a node
+  useEffect(() => {
+    if (isMobile) {
+      setShowMobileMenu(false)
+      setShowMobileFilters(false)
+    }
+  }, [selectedNode, isMobile])
+
   const [filters, setFilters] = useState<FilterState>({
     factions: [],
     locations: [],
@@ -44,7 +68,6 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
 
   const [showNpcForm, setShowNpcForm] = useState(false)
   const [showRelationshipForm, setShowRelationshipForm] = useState(false)
-  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
   const [parentCrewNode, setParentCrewNode] = useState<GraphNode | null>(null)
   const [editingNpc, setEditingNpc] = useState<Npc | null>(null)
   const [editingRelationship, setEditingRelationship] = useState<GraphLink | null>(null)
@@ -369,73 +392,146 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   }
 
   return (
-    <div className="detective-page">
+    <div className={`detective-page ${isMobile ? 'is-mobile' : ''}`}>
       <div className="wood-frame">
         {/* Top toolbar */}
         <div className="detective-toolbar">
           <div className="toolbar-left">
             <Link href="/" className="nav-link">
-              ← Campaigns
+              {isMobile ? '←' : '← Campaigns'}
             </Link>
-            <h1 className="toolbar-title">📋 {campaign?.name || 'Case Board'}</h1>
+            <h1 className="toolbar-title">
+              {isMobile ? (campaign?.name || 'Board') : `📋 ${campaign?.name || 'Case Board'}`}
+            </h1>
           </div>
-          <div className="toolbar-center">
-            <span className="stats-badge">
-              {data.nodes.length} Characters • {data.links.length} Connections
-            </span>
-          </div>
+          {!isMobile && (
+            <div className="toolbar-center">
+              <span className="stats-badge">
+                {data.nodes.length} Characters • {data.links.length} Connections
+              </span>
+            </div>
+          )}
           <div className="toolbar-right">
-            <button
-              onClick={() => setShowLegend(!showLegend)}
-              className="toolbar-btn"
-            >
-              🏷️ Legend
-            </button>
-            <select
-              value={userRole}
-              onChange={e => setUserRole(e.target.value as 'viewer' | 'editor' | 'admin')}
-              className="role-select"
-            >
-              <option value="viewer">👁️ Viewer</option>
-              <option value="editor">✏️ Editor</option>
-              <option value="admin">👑 Admin</option>
-            </select>
+            {isMobile ? (
+              <>
+                <button
+                  onClick={() => setShowMobileFilters(!showMobileFilters)}
+                  className={`toolbar-btn mobile-btn ${showMobileFilters ? 'active' : ''}`}
+                >
+                  🔍
+                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => setShowMobileMenu(!showMobileMenu)}
+                    className={`toolbar-btn mobile-btn ${showMobileMenu ? 'active' : ''}`}
+                  >
+                    ＋
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setShowLegend(!showLegend)}
+                  className="toolbar-btn"
+                >
+                  🏷️ Legend
+                </button>
+                <select
+                  value={userRole}
+                  onChange={e => setUserRole(e.target.value as 'viewer' | 'editor' | 'admin')}
+                  className="role-select"
+                >
+                  <option value="viewer">👁️ Viewer</option>
+                  <option value="editor">✏️ Editor</option>
+                  <option value="admin">👑 Admin</option>
+                </select>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Main content */}
-        <div className="detective-content">
-          {/* Left sidebar - filters & actions */}
-          <div className="detective-sidebar">
-            {canEdit && (
-              <div className="action-buttons">
-                <button
-                  onClick={() => {
-                    setEditingNpc(null)
-                    setShowNpcForm(true)
-                  }}
-                  className="action-btn add-npc"
-                >
-                  📌 Add Character
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingRelationship(null)
-                    setShowRelationshipForm(true)
-                  }}
-                  className="action-btn add-relation"
-                >
-                  🧵 Add Connection
-                </button>
-              </div>
-            )}
+        {/* Mobile action menu */}
+        {isMobile && showMobileMenu && canEdit && (
+          <div className="mobile-action-menu">
+            <button
+              onClick={() => {
+                setEditingNpc(null)
+                setShowNpcForm(true)
+                setShowMobileMenu(false)
+              }}
+              className="mobile-action-btn add-npc"
+            >
+              📌 Add Character
+            </button>
+            <button
+              onClick={() => {
+                setEditingRelationship(null)
+                setShowRelationshipForm(true)
+                setShowMobileMenu(false)
+              }}
+              className="mobile-action-btn add-relation"
+            >
+              🧵 Add Connection
+            </button>
+            <button
+              onClick={() => {
+                setShowLegend(true)
+                setShowMobileMenu(false)
+              }}
+              className="mobile-action-btn legend-btn"
+            >
+              🏷️ Legend
+            </button>
+          </div>
+        )}
 
+        {/* Mobile filter panel */}
+        {isMobile && showMobileFilters && (
+          <div className="mobile-filter-panel">
             <DetectiveFilterPanel
               data={data}
               filters={filters}
               onFiltersChange={setFilters}
             />
           </div>
+        )}
+
+        {/* Main content */}
+        <div className="detective-content">
+          {/* Left sidebar - filters & actions (desktop only) */}
+          {!isMobile && (
+            <div className="detective-sidebar">
+              {canEdit && (
+                <div className="action-buttons">
+                  <button
+                    onClick={() => {
+                      setEditingNpc(null)
+                      setShowNpcForm(true)
+                    }}
+                    className="action-btn add-npc"
+                  >
+                    📌 Add Character
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingRelationship(null)
+                      setShowRelationshipForm(true)
+                    }}
+                    className="action-btn add-relation"
+                  >
+                    🧵 Add Connection
+                  </button>
+                </div>
+              )}
+
+              <DetectiveFilterPanel
+                data={data}
+                filters={filters}
+                onFiltersChange={setFilters}
+              />
+            </div>
+          )}
 
           {/* Main board area */}
           <div className="detective-board-container">
@@ -448,9 +544,9 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
             />
           </div>
 
-          {/* Right panel - selected NPC details */}
+          {/* Right panel - selected NPC details (desktop: sidebar, mobile: bottom sheet) */}
           {selectedNode && (
-            <div className="detective-detail-panel">
+            <div className={`detective-detail-panel ${isMobile ? 'mobile-sheet' : ''}`}>
               <DetectiveNpcPanel
                 node={selectedNode}
                 relationships={nodeRelationships}
