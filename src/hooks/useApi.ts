@@ -107,8 +107,8 @@ export function useCreateNpc() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['npcs'] })
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
+      queryClient.invalidateQueries({ queryKey: ['npcs'], refetchType: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
     },
   })
 }
@@ -128,8 +128,8 @@ export function useUpdateNpc() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['npcs'] })
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
+      queryClient.invalidateQueries({ queryKey: ['npcs'], refetchType: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
     },
   })
 }
@@ -147,8 +147,8 @@ export function useDeleteNpc() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['npcs'] })
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
+      queryClient.invalidateQueries({ queryKey: ['npcs'], refetchType: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
     },
   })
 }
@@ -174,7 +174,7 @@ export function useCreateRelationship() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
     },
   })
 }
@@ -194,7 +194,7 @@ export function useUpdateRelationship() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
     },
   })
 }
@@ -212,7 +212,7 @@ export function useDeleteRelationship() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
     },
   })
 }
@@ -246,8 +246,8 @@ export function useCreateCrew() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['crews'] })
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
+      queryClient.invalidateQueries({ queryKey: ['crews'], refetchType: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
     },
   })
 }
@@ -267,8 +267,8 @@ export function useUpdateCrew() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['crews'] })
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
+      queryClient.invalidateQueries({ queryKey: ['crews'], refetchType: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
     },
   })
 }
@@ -286,8 +286,8 @@ export function useDeleteCrew() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['crews'] })
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
+      queryClient.invalidateQueries({ queryKey: ['crews'], refetchType: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
     },
   })
 }
@@ -307,9 +307,9 @@ export function useAddCrewMember() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['crews'] })
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      queryClient.invalidateQueries({ queryKey: ['crews'], refetchType: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['campaigns'], refetchType: 'active' })
     },
   })
 }
@@ -329,7 +329,7 @@ export function useCreateCrewRelationship() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
     },
   })
 }
@@ -349,7 +349,7 @@ export function useCreateCrewMemberRelationship() {
       return res.json()
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
     },
   })
 }

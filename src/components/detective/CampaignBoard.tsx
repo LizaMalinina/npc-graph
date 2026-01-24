@@ -192,11 +192,15 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
     setShowNpcForm(false)
   }
 
-  const handleCreateRelationship = async (relData: Partial<GraphLink>) => {
-    const { source, target, type, description, strength } = relData
-    if (source && target && type) {
-      const fromNpcId = typeof source === 'object' ? (source as { id: string }).id : source
-      const toNpcId = typeof target === 'object' ? (target as { id: string }).id : target
+  const handleCreateRelationship = async (relData: {
+    fromNpcId: string
+    toNpcId: string
+    type: string
+    description?: string
+    strength: number
+  }) => {
+    const { fromNpcId, toNpcId, type, description, strength } = relData
+    if (fromNpcId && toNpcId && type) {
       await createRelationship.mutateAsync({
         fromNpcId,
         toNpcId,
