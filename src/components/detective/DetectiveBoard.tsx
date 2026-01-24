@@ -75,7 +75,7 @@ export default function DetectiveBoard({
   const [isPanning, setIsPanning] = useState(false)
   const [panStart, setPanStart] = useState({ x: 0, y: 0 })
   const [isMobile, setIsMobile] = useState(false)
-  const hasInitializedView = useRef(false)
+  const [viewInitialized, setViewInitialized] = useState(false)
   
   // Track mouse position for click vs drag detection
   const mouseDownPos = useRef<{ x: number; y: number } | null>(null)
@@ -261,11 +261,11 @@ export default function DetectiveBoard({
 
   // Fit all nodes in view on initial load - only runs once when positions are first set
   useEffect(() => {
-    // Only run when we just set positions for the first time
-    if (hasInitializedView.current || positions.size === 0 || dimensions.width === 0) return
+    // Only run when we have positions and haven't initialized yet
+    if (viewInitialized || positions.size === 0 || dimensions.width === 0) return
     
-    // Mark as initialized immediately to prevent re-runs
-    hasInitializedView.current = true
+    // Mark as initialized immediately via state update
+    setViewInitialized(true)
     
     // Calculate bounding box of all nodes
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
@@ -306,7 +306,8 @@ export default function DetectiveBoard({
     
     setZoom(fitZoom)
     setPan({ x: panX, y: panY })
-  }, [positions.size, dimensions.width, dimensions.height]) // Only depend on size/dimensions, not the map itself
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewInitialized, positions.size, dimensions.width, dimensions.height])
 
   // Mouse handlers for dragging nodes
   const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {

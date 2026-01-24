@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCampaigns, useCreateCampaign } from '@/hooks/useApi'
 
@@ -12,13 +12,6 @@ export default function Home() {
   const [newCampaignName, setNewCampaignName] = useState('')
   const [newCampaignDescription, setNewCampaignDescription] = useState('')
   const [crewName, setCrewName] = useState('The Party')
-
-  // If there's only one campaign, auto-redirect to it
-  useEffect(() => {
-    if (campaigns && campaigns.length === 1) {
-      router.push(`/campaign/${campaigns[0].id}`)
-    }
-  }, [campaigns, router])
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault()
