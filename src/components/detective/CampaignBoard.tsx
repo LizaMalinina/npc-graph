@@ -19,6 +19,8 @@ import {
   useUpdateRelationship,
   useDeleteRelationship,
   useAddCrewMember,
+  useCreateCrewRelationship,
+  useCreateCrewMemberRelationship,
 } from '@/hooks/useApi'
 
 interface CampaignBoardProps {
@@ -58,6 +60,8 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const updateRelationship = useUpdateRelationship()
   const addCrewMember = useAddCrewMember()
   const deleteRelationship = useDeleteRelationship()
+  const createCrewRelationship = useCreateCrewRelationship()
+  const createCrewMemberRelationship = useCreateCrewMemberRelationship()
 
   // Get crew from graph data
   const crews = useMemo(() => {
@@ -201,20 +205,87 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   }) => {
     const { fromNpcId, toNpcId, type, description, strength } = relData
     if (fromNpcId && toNpcId && type) {
-      await createRelationship.mutateAsync({
-        fromNpcId,
-        toNpcId,
-        type,
-        description: description ?? undefined,
-        strength: strength ?? 5,
-      })
+      try {
+        const isFromCrew = fromNpcId.startsWith('crew-')
+        const isFromCrewMember = fromNpcId.startsWith('member-')
+        const isToCrew = toNpcId.startsWith('crew-')
+        const isToCrewMember = toNpcId.startsWith('member-')
+        
+        if (isFromCrew && !isToCrew && !isToCrewMember) {
+          // Crew to NPC relationship
+          const crewId = fromNpcId.replace('crew-', '')
+          await createCrewRelationship.mutateAsync({
+            crewId,
+            toNpcId,
+            type,
+            description: description ?? undefined,
+            strength: strength ?? 5,
+          })
+        } else if (isFromCrewMember && !isToCrew && !isToCrewMember) {
+          // Crew member to NPC relationship
+          const crewMemberId = fromNpcId.replace('member-', '')
+          await createCrewMemberRelationship.mutateAsync({
+            crewMemberId,
+            toNpcId,
+            type,
+            description: description ?? undefined,
+            strength: strength ?? 5,
+          })
+        } else if (!isFromCrew && !isFromCrewMember && isToCrew) {
+          // NPC to Crew relationship - create as crew to NPC (reverse direction)
+          const crewId = toNpcId.replace('crew-', '')
+          await createCrewRelationship.mutateAsync({
+            crewId,
+            toNpcId: fromNpcId,
+            type,
+            description: description ?? undefined,
+            strength: strength ?? 5,
+          })
+        } else if (!isFromCrew && !isFromCrewMember && isToCrewMember) {
+          // NPC to Crew Member relationship - create as crew member to NPC (reverse direction)
+          const crewMemberId = toNpcId.replace('member-', '')
+          await createCrewMemberRelationship.mutateAsync({
+            crewMemberId,
+            toNpcId: fromNpcId,
+            type,
+            description: description ?? undefined,
+            strength: strength ?? 5,
+          })
+        } else if (!isFromCrew && !isFromCrewMember && !isToCrew && !isToCrewMember) {
+          // NPC to NPC relationship
+          await createRelationship.mutateAsync({
+            fromNpcId,
+            toNpcId,
+            type,
+            description: description ?? undefined,
+            strength: strength ?? 5,
+          })
+        } else {
+          console.error('Unsupported relationship type combination')
+        }
+      } catch (error) {
+        console.error('Failed to create relationship:', error)
+      }
     }
     setShowRelationshipForm(false)
   }
 
-  const handleUpdateRelationship = async (relData: Partial<GraphLink>) => {
+  const handleUpdateRelationship = async (relData: {
+    fromNpcId: string
+    toNpcId: string
+    type: string
+    description?: string
+    strength: number
+  }) => {
     if (editingRelationship) {
-      await updateRelationship.mutateAsync({ id: editingRelationship.id, data: relData })
+      await updateRelationship.mutateAsync({ 
+        id: editingRelationship.id, 
+        data: {
+          type: relData.type,
+          description: relData.description,
+          strength: relData.strength,
+        }
+      })
       setShowRelationshipForm(false)
       setEditingRelationship(null)
     }

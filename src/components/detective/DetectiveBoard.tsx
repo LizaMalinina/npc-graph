@@ -74,7 +74,10 @@ export default function DetectiveBoard({
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const [panStart, setPanStart] = useState({ x: 0, y: 0 })
-  const [didDrag, setDidDrag] = useState(false)
+  
+  // Track mouse position for click vs drag detection
+  const mouseDownPos = useRef<{ x: number; y: number } | null>(null)
+  const DRAG_THRESHOLD = 5 // pixels - if mouse moves less than this, it's a click
 
   // Filter nodes and links
   const { filteredNodes, filteredLinks } = useMemo(() => {
@@ -245,7 +248,7 @@ export default function DetectiveBoard({
   const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
     e.preventDefault()
     e.stopPropagation()
-    setDidDrag(false)
+    mouseDownPos.current = { x: e.clientX, y: e.clientY }
     const pos = positions.get(nodeId)
     if (pos) {
       setDraggingNode(nodeId)
@@ -280,7 +283,6 @@ export default function DetectiveBoard({
         y: e.clientY - panStart.y
       })
     } else if (draggingNode) {
-      setDidDrag(true)
       const rect = containerRef.current?.getBoundingClientRect()
       if (rect) {
         const newX = (e.clientX - rect.left - pan.x) / zoom - dragOffset.x
@@ -295,18 +297,24 @@ export default function DetectiveBoard({
   }, [isPanning, panStart, draggingNode, dragOffset, zoom, pan])
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    // If we were dragging a node and didn't actually move, treat it as a click
-    if (draggingNode && !didDrag) {
+    // Check if this was a click (minimal mouse movement) vs a drag
+    const wasClick = mouseDownPos.current && 
+      Math.abs(e.clientX - mouseDownPos.current.x) < DRAG_THRESHOLD &&
+      Math.abs(e.clientY - mouseDownPos.current.y) < DRAG_THRESHOLD
+    
+    // If we were on a node and didn't drag much, treat it as a click
+    if (draggingNode && wasClick) {
       const node = filteredNodes.find(n => n.id === draggingNode)
       if (node) {
         setSelectedNodeId(node.id)
         onNodeClick(node)
       }
     }
+    
+    mouseDownPos.current = null
     setDraggingNode(null)
     setIsPanning(false)
-    setDidDrag(false)
-  }, [draggingNode, didDrag, filteredNodes, onNodeClick])
+  }, [draggingNode, filteredNodes, onNodeClick])
 
   // Handle node click - only used for direct clicks without drag
   const handleNodeClick = useCallback((e: React.MouseEvent, node: GraphNode) => {

@@ -373,6 +373,38 @@
   border: 3px solid #f59e0b;
 }
 
+/* Crew member node styling */
+.polaroid-card.crew-member-node {
+  border: 3px solid #8b5cf6;
+  background: linear-gradient(145deg, #f5f3ff 0%, #ede9fe 50%, #ddd6fe 100%);
+  box-shadow: 
+    0 0 0 1px rgba(139, 92, 246, 0.3),
+    3px 3px 8px rgba(0, 0, 0, 0.3),
+    -1px -1px 3px rgba(255, 255, 255, 0.5);
+}
+
+.polaroid-card.crew-member-node.selected {
+  box-shadow: 
+    0 0 0 3px #8b5cf6,
+    0 0 15px rgba(139, 92, 246, 0.5),
+    5px 5px 15px rgba(0, 0, 0, 0.4);
+}
+
+/* Crew node styling */
+.polaroid-card.crew-node {
+  width: 120px;
+  padding: 10px 10px 35px 10px;
+  border: 3px solid #3b82f6;
+  background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 50%, #bfdbfe 100%);
+}
+
+.polaroid-card.crew-node.selected {
+  box-shadow: 
+    0 0 0 3px #3b82f6,
+    0 0 15px rgba(59, 130, 246, 0.5),
+    5px 5px 15px rgba(0, 0, 0, 0.4);
+}
+
 .polaroid-card.dead {
   filter: grayscale(0.6);
 }
