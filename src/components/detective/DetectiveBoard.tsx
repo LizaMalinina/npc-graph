@@ -74,6 +74,8 @@ export default function DetectiveBoard({
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const [panStart, setPanStart] = useState({ x: 0, y: 0 })
+  const [isMobile, setIsMobile] = useState(false)
+  const hasInitializedView = useRef(false)
   
   // Track mouse position for click vs drag detection
   const mouseDownPos = useRef<{ x: number; y: number } | null>(null)
@@ -248,6 +250,60 @@ export default function DetectiveBoard({
       return newPositions
     })
   }, [filteredNodes, dimensions])
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Fit all nodes in view on initial load
+  useEffect(() => {
+    if (hasInitializedView.current || positions.size === 0 || dimensions.width === 0) return
+    
+    // Calculate bounding box of all nodes
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    positions.forEach(pos => {
+      minX = Math.min(minX, pos.x)
+      minY = Math.min(minY, pos.y)
+      maxX = Math.max(maxX, pos.x)
+      maxY = Math.max(maxY, pos.y)
+    })
+    
+    // Add padding for card size (cards are ~100px)
+    const padding = 80
+    minX -= padding
+    minY -= padding
+    maxX += padding
+    maxY += padding
+    
+    const contentWidth = maxX - minX
+    const contentHeight = maxY - minY
+    
+    // Calculate zoom to fit all content with some margin
+    const margin = 40
+    const availableWidth = dimensions.width - margin * 2
+    const availableHeight = dimensions.height - margin * 2
+    
+    const scaleX = availableWidth / contentWidth
+    const scaleY = availableHeight / contentHeight
+    const fitZoom = Math.min(scaleX, scaleY, 1) // Don't zoom in past 1x
+    
+    // Calculate pan to center the content
+    const contentCenterX = (minX + maxX) / 2
+    const contentCenterY = (minY + maxY) / 2
+    const viewCenterX = dimensions.width / 2
+    const viewCenterY = dimensions.height / 2
+    
+    const panX = viewCenterX - contentCenterX * fitZoom
+    const panY = viewCenterY - contentCenterY * fitZoom
+    
+    setZoom(fitZoom)
+    setPan({ x: panX, y: panY })
+    hasInitializedView.current = true
+  }, [positions, dimensions])
 
   // Mouse handlers for dragging nodes
   const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
@@ -652,6 +708,10 @@ export default function DetectiveBoard({
             onMouseDown={(e) => handleMouseDown(e, node.id)}
             onMouseEnter={() => setHoveredNode(node.id)}
             onMouseLeave={() => setHoveredNode(null)}
+            onTouchStart={(e) => {
+              e.stopPropagation()
+              handleTouchStart(e, node.id)
+            }}
           >
             {/* Push pin */}
             <div 

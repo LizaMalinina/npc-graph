@@ -1021,3 +1021,205 @@
 .connections-list::-webkit-scrollbar-thumb:hover {
   background: rgba(167, 243, 208, 0.7);
 }
+
+/* Mobile Action Menu */
+.mobile-action-menu {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(180deg, #1f352a 0%, #2d4a3a 100%);
+  border-bottom: 2px solid #1a2d22;
+  overflow-x: auto;
+}
+
+.mobile-action-btn {
+  flex: 1;
+  min-width: 100px;
+  padding: 0.75rem 1rem;
+  border: 1px solid #a7f3d0;
+  background: rgba(167, 243, 208, 0.15);
+  color: #a7f3d0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.mobile-action-btn:active {
+  background: rgba(167, 243, 208, 0.3);
+  transform: scale(0.98);
+}
+
+/* Mobile Filter Panel */
+.mobile-filter-panel {
+  max-height: 40vh;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #2d4a3a 0%, #1f352a 100%);
+  border-bottom: 3px solid #1a2d22;
+  padding: 0.75rem;
+}
+
+.mobile-filter-panel .filter-panel {
+  padding: 0;
+}
+
+/* Mobile toolbar button styles */
+.toolbar-btn.mobile-btn {
+  padding: 0.5rem 0.75rem;
+  font-size: 1.25rem;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbar-btn.mobile-btn.active {
+  background: rgba(167, 243, 208, 0.4);
+  border-color: #d1fae5;
+}
+
+/* Mobile detail panel (bottom sheet) */
+.detective-detail-panel.mobile-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-height: 60vh;
+  z-index: 200;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 767px) {
+  .detective-page.is-mobile .wood-frame {
+    border-width: 6px;
+  }
+
+  .detective-page.is-mobile .detective-toolbar {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .detective-page.is-mobile .toolbar-title {
+    font-size: 1rem;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .detective-page.is-mobile .nav-link {
+    padding: 0.5rem;
+    font-size: 1.25rem;
+  }
+
+  .detective-page.is-mobile .detective-board-container {
+    flex: 1;
+    width: 100%;
+  }
+
+  .detective-page.is-mobile .detective-board {
+    min-height: 100% !important;
+  }
+
+  /* Smaller polaroid cards on mobile */
+  .detective-page.is-mobile .polaroid-card {
+    width: 75px;
+    padding: 4px;
+  }
+
+  .detective-page.is-mobile .photo-frame {
+    width: 65px;
+    height: 65px;
+  }
+
+  .detective-page.is-mobile .name-label {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+    max-width: 100px;
+  }
+
+  .detective-page.is-mobile .push-pin {
+    width: 12px;
+    height: 12px;
+    top: -6px;
+  }
+
+  /* Bigger touch targets for zoom controls on mobile */
+  .detective-page.is-mobile .zoom-controls button {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 1.5rem !important;
+  }
+
+  /* Mobile NPC panel styling */
+  .detective-page.is-mobile .npc-panel {
+    padding: 1rem;
+  }
+
+  .detective-page.is-mobile .npc-panel .panel-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .detective-page.is-mobile .npc-panel .panel-avatar {
+    width: 80px;
+    height: 80px;
+  }
+
+  /* Form modal full screen on mobile */
+  .detective-page.is-mobile .modal-overlay {
+    padding: 0;
+  }
+
+  .detective-page.is-mobile .form-modal {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  /* Legend popup full width on mobile */
+  .detective-page.is-mobile .legend-popup {
+    width: 95vw;
+    max-width: none;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 400px) {
+  .mobile-action-btn {
+    min-width: 80px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .detective-page.is-mobile .toolbar-title {
+    max-width: 100px;
+    font-size: 0.9rem;
+  }
+
+  .detective-page.is-mobile .polaroid-card {
+    width: 60px;
+    padding: 3px;
+  }
+
+  .detective-page.is-mobile .photo-frame {
+    width: 52px;
+    height: 52px;
+  }
+}
