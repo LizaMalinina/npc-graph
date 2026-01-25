@@ -9,6 +9,7 @@ async function main() {
   const campaign = await prisma.campaign.create({
     data: {
       name: 'The Realm of Eldoria',
+      slug: 'the-realm-of-eldoria',
       description: 'A fantasy world of magic, intrigue, and adventure',
       isActive: true,
       crew: {

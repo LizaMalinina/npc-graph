@@ -25,6 +25,7 @@ model User {
 // Campaign model - organizes NPCs, crews, and relationships
 model Campaign {
   id          String   @id @default(cuid())
+  slug        String   @unique
   name        String
   description String?
   imageUrl    String?

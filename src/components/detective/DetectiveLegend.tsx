@@ -5,10 +5,6 @@ import { RELATIONSHIP_COLORS } from '@/types'
 export default function DetectiveLegend() {
   return (
     <div className="detective-legend">
-      <div className="legend-header">
-        <h3>🏷️ Case Legend</h3>
-      </div>
-
       <div className="legend-content">
         {/* Pin colors */}
         <div className="legend-section">
@@ -47,9 +43,8 @@ export default function DetectiveLegend() {
           <h4>💡 Tips</h4>
           <ul className="hint-list">
             <li>🖱️ Drag photos to rearrange</li>
-            <li>👆 Click photo to see details</li>
-            <li>🔍 Click background to deselect</li>
-            <li>✨ Hover to reveal names</li>
+            <li>👆 Tap photo to see details</li>
+            <li>🔍 Tap background to deselect</li>
           </ul>
         </div>
       </div>

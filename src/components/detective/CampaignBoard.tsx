@@ -23,6 +23,8 @@ import {
   useDeleteCrewMember,
   useCreateCrewRelationship,
   useCreateCrewMemberRelationship,
+  useDeleteCrewRelationship,
+  useDeleteCrewMemberRelationship,
 } from '@/hooks/useApi'
 
 interface CampaignBoardProps {
@@ -101,6 +103,8 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const updateCrewMember = useUpdateCrewMember()
   const deleteCrewMember = useDeleteCrewMember()
   const deleteRelationship = useDeleteRelationship()
+  const deleteCrewRelationship = useDeleteCrewRelationship()
+  const deleteCrewMemberRelationship = useDeleteCrewMemberRelationship()
   const createCrewRelationship = useCreateCrewRelationship()
   const createCrewMemberRelationship = useCreateCrewMemberRelationship()
 
@@ -410,14 +414,48 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   }
 
   const handleDeleteConnectionFromPanel = async (relationshipId: string) => {
-    if (!confirm('Are you sure you want to delete this connection?')) {
+    if (!confirm('Are you sure you want to delete this relationship?')) {
       return
     }
     try {
-      await deleteRelationship.mutateAsync(relationshipId)
+      // Parse the relationship ID to determine the type
+      if (relationshipId.startsWith('crew-rel-')) {
+        // Crew relationship
+        const actualId = relationshipId.replace('crew-rel-', '')
+        await deleteCrewRelationship.mutateAsync(actualId)
+      } else if (relationshipId.startsWith('member-rel-')) {
+        // Crew member relationship
+        const actualId = relationshipId.replace('member-rel-', '')
+        await deleteCrewMemberRelationship.mutateAsync(actualId)
+      } else {
+        // Regular NPC relationship
+        await deleteRelationship.mutateAsync(relationshipId)
+      }
     } catch (error) {
-      console.error('Failed to delete connection:', error)
-      alert('Failed to delete connection. Please try again.')
+      console.error('Failed to delete relationship:', error)
+      alert('Failed to delete relationship. Please try again.')
+    }
+  }
+
+  // Handle editing relationship from panel
+  const handleEditRelationshipFromPanel = (relationshipId: string) => {
+    // Find the relationship in the graph data
+    const extendedData = graphData as GraphData & { 
+      crewLinks?: GraphLink[]
+      memberLinks?: GraphLink[]
+    }
+    
+    const allLinks = [
+      ...graphData!.links,
+      ...(extendedData.crewLinks || []),
+      ...(extendedData.memberLinks || [])
+    ]
+    
+    const link = allLinks.find(l => l.id === relationshipId)
+    if (link) {
+      setEditingRelationship(link)
+      setPreselectedFromId(null)
+      setShowRelationshipForm(true)
     }
   }
 
@@ -557,33 +595,37 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
           <div className="mobile-toolbar-icons">
             <button
               onClick={() => toggleMobilePanel('filters')}
-              className={`toolbar-btn mobile-btn ${showMobileFilters ? 'active' : ''}`}
+              className={`toolbar-btn mobile-btn-labeled ${showMobileFilters ? 'active' : ''}`}
               title="Search & Filter"
             >
-              🔍
+              <span className="btn-icon">🔍</span>
+              <span className="btn-label">Search</span>
             </button>
             {canEdit && (
               <button
                 onClick={() => toggleMobilePanel('menu')}
-                className={`toolbar-btn mobile-btn ${showMobileMenu ? 'active' : ''}`}
+                className={`toolbar-btn mobile-btn-labeled ${showMobileMenu ? 'active' : ''}`}
                 title="Add"
               >
-                ＋
+                <span className="btn-icon">＋</span>
+                <span className="btn-label">Add</span>
               </button>
             )}
             <button
               onClick={() => toggleMobilePanel('legend')}
-              className={`toolbar-btn mobile-btn ${showMobileLegend ? 'active' : ''}`}
+              className={`toolbar-btn mobile-btn-labeled ${showMobileLegend ? 'active' : ''}`}
               title="Legend"
             >
-              🏷️
+              <span className="btn-icon">🏷️</span>
+              <span className="btn-label">Legend</span>
             </button>
             <button
               onClick={() => toggleMobilePanel('roles')}
-              className={`toolbar-btn mobile-btn ${showMobileRoles ? 'active' : ''}`}
+              className={`toolbar-btn mobile-btn-labeled ${showMobileRoles ? 'active' : ''}`}
               title="Role"
             >
-              {userRole === 'viewer' ? '👁️' : userRole === 'editor' ? '✏️' : '👑'}
+              <span className="btn-icon">{userRole === 'viewer' ? '👁️' : userRole === 'editor' ? '✏️' : '👑'}</span>
+              <span className="btn-label">Role</span>
             </button>
           </div>
         )}
@@ -730,6 +772,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
                   onEdit={handleEditNpc}
                   onAddConnection={handleAddConnectionFromNode}
                   onDeleteConnection={handleDeleteConnectionFromPanel}
+                  onEditRelationship={handleEditRelationshipFromPanel}
                   onMemberClick={handleMemberClick}
                   onBackToCrew={handleBackToCrew}
                   parentCrew={parentCrewNode}

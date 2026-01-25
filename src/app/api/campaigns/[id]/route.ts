@@ -1,16 +1,32 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// GET single campaign with all data
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+// Helper to find campaign by id or slug
+async function findCampaign(idOrSlug: string) {
+  // Try by id first (cuid format), then by slug
+  let campaign = await prisma.campaign.findUnique({
+    where: { id: idOrSlug },
+    include: {
+      crew: {
+        include: {
+          members: true,
+          relationshipsFrom: {
+            include: { toNpc: true }
+          }
+        }
+      },
+      npcs: {
+        include: {
+          relationshipsFrom: true,
+          relationshipsTo: true
+        }
+      }
+    }
+  })
   
-  try {
-    const campaign = await prisma.campaign.findUnique({
-      where: { id },
+  if (!campaign) {
+    campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
       include: {
         crew: {
           include: {
@@ -28,6 +44,20 @@ export async function GET(
         }
       }
     })
+  }
+  
+  return campaign
+}
+
+// GET single campaign with all data
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  
+  try {
+    const campaign = await findCampaign(id)
     
     if (!campaign) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
@@ -51,8 +81,14 @@ export async function PUT(
     const body = await request.json()
     const { name, description, imageUrl, isActive } = body
     
+    // Find campaign by id or slug to get the actual id
+    const existing = await findCampaign(id)
+    if (!existing) {
+      return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+    }
+    
     const campaign = await prisma.campaign.update({
-      where: { id },
+      where: { id: existing.id },
       data: {
         ...(name && { name }),
         ...(description !== undefined && { description }),
@@ -82,8 +118,14 @@ export async function DELETE(
   const { id } = await params
   
   try {
+    // Find campaign by id or slug to get the actual id
+    const existing = await findCampaign(id)
+    if (!existing) {
+      return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+    }
+    
     await prisma.campaign.delete({
-      where: { id }
+      where: { id: existing.id }
     })
     
     return NextResponse.json({ success: true })

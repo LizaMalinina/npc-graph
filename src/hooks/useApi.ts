@@ -414,6 +414,24 @@ export function useCreateCrewRelationship() {
   })
 }
 
+// Delete Crew Relationship
+export function useDeleteCrewRelationship() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/crew-relationships?id=${id}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('Failed to delete crew relationship')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
+    },
+  })
+}
+
 // Create Crew Member Relationship (crew member to NPC)
 export function useCreateCrewMemberRelationship() {
   const queryClient = useQueryClient()
@@ -426,6 +444,24 @@ export function useCreateCrewMemberRelationship() {
         body: JSON.stringify(data),
       })
       if (!res.ok) throw new Error('Failed to create crew member relationship')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
+    },
+  })
+}
+
+// Delete Crew Member Relationship
+export function useDeleteCrewMemberRelationship() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/crew-member-relationships?id=${id}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('Failed to delete crew member relationship')
       return res.json()
     },
     onSuccess: () => {

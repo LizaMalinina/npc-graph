@@ -476,6 +476,15 @@
   z-index: 20;
 }
 
+/* Mobile always-visible name label - more compact */
+.name-label.mobile-always-visible {
+  font-size: 0.55rem;
+  padding: 2px 4px;
+  max-width: 80px;
+  bottom: -16px;
+  opacity: 0.9;
+}
+
 .title-text {
   display: block;
   font-weight: normal;
@@ -712,6 +721,34 @@
 .connection-type {
   color: #6b7280;
   font-size: 0.75rem;
+}
+
+/* Edit connection button */
+.edit-connection-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+  cursor: pointer;
+  font-size: 0.6rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.connection-item:hover .edit-connection-btn {
+  opacity: 1;
+}
+
+.edit-connection-btn:hover {
+  background: rgba(59, 130, 246, 0.6);
+  color: white;
 }
 
 /* Delete connection button */
@@ -1189,30 +1226,52 @@
   padding: 0;
 }
 
-/* Mobile toolbar button styles */
-.toolbar-btn.mobile-btn {
-  padding: 0.4rem 0.6rem;
-  font-size: 1.1rem;
-  min-width: 40px;
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.toolbar-btn.mobile-btn.active {
-  background: rgba(167, 243, 208, 0.4);
-  border-color: #d1fae5;
-}
-
 /* Mobile toolbar icons row */
 .mobile-toolbar-icons {
   display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
+  justify-content: space-around;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
   background: linear-gradient(180deg, #1f352a 0%, #2d4a3a 100%);
   border-bottom: 2px solid #1a2d22;
+}
+
+/* Mobile toolbar button with label */
+.toolbar-btn.mobile-btn-labeled {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+  padding: 0.4rem 0.25rem;
+  font-size: 1rem;
+  background: rgba(45, 74, 58, 0.6);
+  border: 1px solid rgba(167, 243, 208, 0.3);
+  border-radius: 0.5rem;
+  color: #a7f3d0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  max-width: calc(25% - 0.2rem);
+  overflow: hidden;
+}
+
+.toolbar-btn.mobile-btn-labeled .btn-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.toolbar-btn.mobile-btn-labeled .btn-label {
+  font-size: 0.65rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.toolbar-btn.mobile-btn-labeled.active {
+  background: rgba(167, 243, 208, 0.4);
+  border-color: #d1fae5;
 }
 
 /* Mobile toolbar adjustments */

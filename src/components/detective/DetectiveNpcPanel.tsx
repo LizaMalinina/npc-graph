@@ -18,6 +18,7 @@ interface DetectiveNpcPanelProps {
   onEdit?: () => void
   onAddConnection?: () => void
   onDeleteConnection?: (relationshipId: string) => void
+  onEditRelationship?: (relationshipId: string) => void
   onMemberClick?: (member: GraphNode) => void
   onBackToCrew?: () => void
   parentCrew?: GraphNode | null
@@ -32,6 +33,7 @@ export default function DetectiveNpcPanel({
   onEdit,
   onAddConnection,
   onDeleteConnection,
+  onEditRelationship,
   onMemberClick,
   onBackToCrew,
   parentCrew,
@@ -44,6 +46,9 @@ export default function DetectiveNpcPanel({
   
   const DESCRIPTION_THRESHOLD = 100 // characters before showing "show more"
   const shouldTruncate = isMobile && node.description && node.description.length > DESCRIPTION_THRESHOLD
+  
+  // Determine edit button text based on node type
+  const editButtonText = isCrew ? 'Edit Crew' : isCrewMember ? 'Edit Character' : 'Edit NPC'
 
   // Mobile horizontal layout for NPCs and crew members (not crews)
   if (isMobile && !isCrew) {
@@ -128,21 +133,21 @@ export default function DetectiveNpcPanel({
           </div>
         </div>
 
-        {/* Connections section - full width */}
+        {/* Relationships section - full width */}
         <div className="connections-section compact">
           <div className="section-header">
             <h3 className="section-title">
-              <span className="yarn-icon">🧵</span> Connections
+              <span className="yarn-icon">🧵</span> Relationships
             </h3>
             {canEdit && onAddConnection && (
-              <button onClick={onAddConnection} className="add-connection-inline-btn" title="Add Connection">
+              <button onClick={onAddConnection} className="add-connection-inline-btn" title="Add Relationship">
                 ＋
               </button>
             )}
           </div>
 
           {relationships.from.length === 0 && relationships.to.length === 0 ? (
-            <p className="no-connections">No known connections</p>
+            <p className="no-connections">No relationships yet</p>
           ) : (
             <div className="connections-list horizontal">
               {[
@@ -168,11 +173,20 @@ export default function DetectiveNpcPanel({
                     />
                     <span className="connection-name">{rel.name}</span>
                     <span className="connection-type">[{rel.type}]</span>
+                    {canEdit && onEditRelationship && (
+                      <button 
+                        className="edit-connection-btn"
+                        onClick={() => onEditRelationship(rel.id)}
+                        title="Edit relationship"
+                      >
+                        ✏️
+                      </button>
+                    )}
                     {canEdit && onDeleteConnection && (
                       <button 
                         className="delete-connection-btn"
                         onClick={() => onDeleteConnection(rel.id)}
-                        title="Delete connection"
+                        title="Delete relationship"
                       >
                         ×
                       </button>
@@ -187,7 +201,7 @@ export default function DetectiveNpcPanel({
         {canEdit && onEdit && (
           <div className="panel-actions">
             <button onClick={onEdit} className="edit-btn">
-              ✏️ Edit
+              ✏️ {editButtonText}
             </button>
           </div>
         )}
@@ -320,21 +334,21 @@ export default function DetectiveNpcPanel({
         )}
       </div>
 
-      {/* Connections section */}
+      {/* Relationships section */}
       <div className="connections-section">
         <div className="section-header">
           <h3 className="section-title">
-            <span className="yarn-icon">🧵</span> Known Connections
+            <span className="yarn-icon">🧵</span> Relationships
           </h3>
           {canEdit && onAddConnection && (
-            <button onClick={onAddConnection} className="add-connection-inline-btn" title="Add Connection">
+            <button onClick={onAddConnection} className="add-connection-inline-btn" title="Add Relationship">
               ＋
             </button>
           )}
         </div>
 
         {relationships.from.length === 0 && relationships.to.length === 0 ? (
-          <p className="no-connections">No known connections</p>
+          <p className="no-connections">No relationships yet</p>
         ) : (
           <div className="connections-list">
             {[
@@ -360,11 +374,20 @@ export default function DetectiveNpcPanel({
                   />
                   <span className="connection-name">{rel.name}</span>
                   <span className="connection-type">[{rel.type}]</span>
+                  {canEdit && onEditRelationship && (
+                    <button 
+                      className="edit-connection-btn"
+                      onClick={() => onEditRelationship(rel.id)}
+                      title="Edit relationship"
+                    >
+                      ✏️
+                    </button>
+                  )}
                   {canEdit && onDeleteConnection && (
                     <button 
                       className="delete-connection-btn"
                       onClick={() => onDeleteConnection(rel.id)}
-                      title="Delete connection"
+                      title="Delete relationship"
                     >
                       ×
                     </button>
@@ -375,11 +398,11 @@ export default function DetectiveNpcPanel({
         )}
       </div>
 
-      {/* Action buttons */}
-      {canEdit && onEdit && (
+      {/* Action buttons - hide Edit for Crew nodes (groups) */}
+      {canEdit && onEdit && !isCrew && (
         <div className="panel-actions">
           <button onClick={onEdit} className="edit-btn">
-            ✏️ Edit Case File
+            ✏️ {editButtonText}
           </button>
         </div>
       )}

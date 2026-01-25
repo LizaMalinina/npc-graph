@@ -201,7 +201,7 @@ export default function Home() {
         {campaigns?.map(campaign => (
           <div key={campaign.id} className="campaign-card-wrapper">
             <button
-              onClick={() => router.push(`/campaign/${campaign.id}`)}
+              onClick={() => router.push(`/campaign/${campaign.slug}`)}
               className="campaign-card"
             >
               <button

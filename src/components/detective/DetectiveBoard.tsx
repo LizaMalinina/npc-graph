@@ -85,6 +85,7 @@ export default function DetectiveBoard({
   // Track mouse position for click vs drag detection
   const mouseDownPos = useRef<{ x: number; y: number } | null>(null)
   const DRAG_THRESHOLD = 5 // pixels - if mouse moves less than this, it's a click
+  const TOUCH_TAP_THRESHOLD = 15 // pixels - higher threshold for touch (less precise)
   
   // Touch state for pinch zoom and touch interactions
   const lastTouchDistance = useRef<number | null>(null)
@@ -485,8 +486,8 @@ export default function DetectiveBoard({
     if (e.changedTouches.length > 0 && touchStartPos.current) {
       const touch = e.changedTouches[0]
       const wasTap = 
-        Math.abs(touch.clientX - touchStartPos.current.x) < DRAG_THRESHOLD &&
-        Math.abs(touch.clientY - touchStartPos.current.y) < DRAG_THRESHOLD
+        Math.abs(touch.clientX - touchStartPos.current.x) < TOUCH_TAP_THRESHOLD &&
+        Math.abs(touch.clientY - touchStartPos.current.y) < TOUCH_TAP_THRESHOLD
       
       if (wasTap && touchNodeId.current) {
         const node = filteredNodes.find(n => n.id === touchNodeId.current)
@@ -506,7 +507,7 @@ export default function DetectiveBoard({
     touchNodeId.current = null
     setDraggingNode(null)
     setIsPanning(false)
-  }, [filteredNodes, onNodeClick])
+  }, [filteredNodes, onNodeClick, TOUCH_TAP_THRESHOLD])
 
   // Get connected nodes for highlighting
   const connectedNodes = useMemo(() => {
@@ -545,76 +546,6 @@ export default function DetectiveBoard({
     >
       {/* Cork board texture background */}
       <div className="cork-background" />
-
-      {/* Zoom controls - hidden on mobile */}
-      {!isMobile && (
-        <div className="zoom-controls" style={{
-          position: 'absolute',
-          bottom: '1rem',
-          right: '1rem',
-          zIndex: 100,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.25rem',
-        }}>
-          <button
-            onClick={() => setZoom(z => Math.min(3, z * 1.2))}
-            className="zoom-btn"
-            title="Zoom In"
-            style={{
-              width: '32px',
-              height: '32px',
-              background: 'rgba(45, 74, 58, 0.9)',
-              border: '1px solid #a7f3d0',
-              borderRadius: '4px',
-              color: '#a7f3d0',
-              cursor: 'pointer',
-              fontSize: '1.2rem',
-            }}
-          >+</button>
-          <button
-            onClick={() => setZoom(z => Math.max(0.3, z / 1.2))}
-            className="zoom-btn"
-            title="Zoom Out"
-            style={{
-              width: '32px',
-              height: '32px',
-              background: 'rgba(45, 74, 58, 0.9)',
-              border: '1px solid #a7f3d0',
-              borderRadius: '4px',
-              color: '#a7f3d0',
-              cursor: 'pointer',
-              fontSize: '1.2rem',
-            }}
-          >−</button>
-          <button
-            onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
-            className="zoom-btn"
-            title="Reset View"
-            style={{
-              width: '32px',
-              height: '32px',
-              background: 'rgba(45, 74, 58, 0.9)',
-              border: '1px solid #a7f3d0',
-              borderRadius: '4px',
-              color: '#a7f3d0',
-              cursor: 'pointer',
-              fontSize: '0.7rem',
-            }}
-          >Reset</button>
-          <div style={{
-            marginTop: '0.5rem',
-            fontSize: '0.65rem',
-            color: '#a7f3d0',
-            textAlign: 'center',
-            opacity: 0.7,
-            lineHeight: 1.3,
-          }}>
-            Scroll to zoom<br/>
-            Ctrl+drag to pan
-          </div>
-        </div>
-      )}
 
       {/* Transformed content container */}
       <div
@@ -759,13 +690,13 @@ export default function DetectiveBoard({
               )}
             </div>
 
-            {/* Name label (sticky note style) */}
-            {(isHovered || isSelected) && (
-              <div className="name-label">
+            {/* Name label (sticky note style) - always show on mobile, show on hover/select for desktop */}
+            {(isMobile || isHovered || isSelected) && (
+              <div className={`name-label ${isMobile && !isSelected && !isHovered ? 'mobile-always-visible' : ''}`}>
                 {isCrew && <span className="crew-label-prefix">👥 </span>}
                 {isCrewMember && <span className="crew-label-prefix">👤 </span>}
                 {node.name}
-                {node.title && <span className="title-text">{node.title}</span>}
+                {node.title && !isMobile && <span className="title-text">{node.title}</span>}
               </div>
             )}
           </div>

@@ -1,6 +1,30 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+// Generate a URL-friendly slug from a name
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .substring(0, 50) // Limit length
+}
+
+// Ensure slug is unique by appending a number if needed
+async function ensureUniqueSlug(baseSlug: string): Promise<string> {
+  let slug = baseSlug
+  let counter = 1
+  
+  while (await prisma.campaign.findUnique({ where: { slug } })) {
+    slug = `${baseSlug}-${counter}`
+    counter++
+  }
+  
+  return slug
+}
+
 // GET all campaigns
 export async function GET() {
   try {
@@ -39,10 +63,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Campaign name is required' }, { status: 400 })
     }
     
+    // Generate unique slug from name
+    const baseSlug = generateSlug(name)
+    const slug = await ensureUniqueSlug(baseSlug || 'campaign')
+    
     // Create campaign with a default crew
     const campaign = await prisma.campaign.create({
       data: {
         name,
+        slug,
         description,
         imageUrl,
         crew: {

@@ -24,6 +24,7 @@ model User {
 // Campaign model - represents a game/story campaign
 model Campaign {
   id          String   @id @default(cuid())
+  slug        String   @unique
   name        String
   description String?
   imageUrl    String?

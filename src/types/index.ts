@@ -1,6 +1,7 @@
 // Campaign types
 export interface Campaign {
   id: string
+  slug: string
   name: string
   description?: string | null
   imageUrl?: string | null

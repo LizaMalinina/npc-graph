@@ -44,3 +44,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create crew relationship' }, { status: 500 })
   }
 }
+
+// DELETE crew relationship by ID
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    
+    if (!id) {
+      return NextResponse.json({ error: 'ID is required' }, { status: 400 })
+    }
+    
+    await prisma.crewRelationship.delete({ where: { id } })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting crew relationship:', error)
+    return NextResponse.json({ error: 'Failed to delete crew relationship' }, { status: 500 })
+  }
+}
