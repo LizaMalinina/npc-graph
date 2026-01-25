@@ -15,6 +15,7 @@ interface DetectiveNpcPanelProps {
   }
   onClose: () => void
   onEdit?: () => void
+  onAddConnection?: () => void
   onMemberClick?: (member: GraphNode) => void
   onBackToCrew?: () => void
   parentCrew?: GraphNode | null
@@ -27,6 +28,7 @@ export default function DetectiveNpcPanel({
   relationships,
   onClose,
   onEdit,
+  onAddConnection,
   onMemberClick,
   onBackToCrew,
   parentCrew,
@@ -159,11 +161,18 @@ export default function DetectiveNpcPanel({
         </div>
 
         {/* Action buttons */}
-        {canEdit && onEdit && (
+        {canEdit && (
           <div className="panel-actions">
-            <button onClick={onEdit} className="edit-btn">
-              ✏️ Edit
-            </button>
+            {onEdit && (
+              <button onClick={onEdit} className="edit-btn">
+                ✏️ Edit
+              </button>
+            )}
+            {onAddConnection && (
+              <button onClick={onAddConnection} className="add-connection-btn">
+                🧵 Add Connection
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -339,11 +348,18 @@ export default function DetectiveNpcPanel({
       </div>
 
       {/* Action buttons */}
-      {canEdit && onEdit && (
+      {canEdit && (
         <div className="panel-actions">
-          <button onClick={onEdit} className="edit-btn">
-            ✏️ Edit Case File
-          </button>
+          {onEdit && (
+            <button onClick={onEdit} className="edit-btn">
+              ✏️ Edit Case File
+            </button>
+          )}
+          {onAddConnection && (
+            <button onClick={onAddConnection} className="add-connection-btn">
+              🧵 Add Connection
+            </button>
+          )}
         </div>
       )}
     </div>

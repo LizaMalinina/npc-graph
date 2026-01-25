@@ -6,6 +6,7 @@ import { GraphNode, GraphLink, RELATIONSHIP_TYPES } from '@/types'
 interface RelationshipFormProps {
   nodes: GraphNode[]
   relationship?: GraphLink | null
+  preselectedFromId?: string
   onSubmit: (data: {
     fromNpcId: string
     toNpcId: string
@@ -20,12 +21,13 @@ interface RelationshipFormProps {
 export default function RelationshipForm({
   nodes,
   relationship,
+  preselectedFromId,
   onSubmit,
   onCancel,
   onDelete,
 }: RelationshipFormProps) {
   const [formData, setFormData] = useState({
-    fromNpcId: relationship?.source || '',
+    fromNpcId: relationship?.source || preselectedFromId || '',
     toNpcId: relationship?.target || '',
     type: relationship?.type || 'friend',
     description: relationship?.description || '',

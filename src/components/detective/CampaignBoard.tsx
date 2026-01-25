@@ -82,6 +82,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
 
   const [showNpcForm, setShowNpcForm] = useState(false)
   const [showRelationshipForm, setShowRelationshipForm] = useState(false)
+  const [preselectedFromId, setPreselectedFromId] = useState<string | null>(null)
   const [parentCrewNode, setParentCrewNode] = useState<GraphNode | null>(null)
   const [editingNpc, setEditingNpc] = useState<Npc | null>(null)
   const [editingCrewMemberId, setEditingCrewMemberId] = useState<string | null>(null)
@@ -165,6 +166,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
 
   const handleLinkClick = (link: GraphLink) => {
     setEditingRelationship(link)
+    setPreselectedFromId(null)
     setShowRelationshipForm(true)
   }
 
@@ -267,6 +269,14 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const handleCreateCrewMember = async (crewId: string, data: { name: string; title?: string; description?: string; imageUrl?: string }) => {
     await addCrewMember.mutateAsync({ crewId, data })
     setShowNpcForm(false)
+  }
+
+  const handleAddConnectionFromNode = () => {
+    if (selectedNode) {
+      setPreselectedFromId(selectedNode.id)
+      setEditingRelationship(null)
+      setShowRelationshipForm(true)
+    }
   }
 
   const handleCreateRelationship = async (relData: {
@@ -533,6 +543,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
             <button
               onClick={() => {
                 setEditingRelationship(null)
+                setPreselectedFromId(null)
                 setShowRelationshipForm(true)
                 setShowMobileMenu(false)
               }}
@@ -604,6 +615,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
                   <button
                     onClick={() => {
                       setEditingRelationship(null)
+                      setPreselectedFromId(null)
                       setShowRelationshipForm(true)
                     }}
                     className="action-btn add-relation"
@@ -643,6 +655,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
                   setParentCrewNode(null)
                 }}
                 onEdit={handleEditNpc}
+                onAddConnection={handleAddConnectionFromNode}
                 onMemberClick={handleMemberClick}
                 onBackToCrew={handleBackToCrew}
                 parentCrew={parentCrewNode}
@@ -684,10 +697,12 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
         <RelationshipForm
           nodes={data.nodes}
           relationship={editingRelationship}
+          preselectedFromId={preselectedFromId || undefined}
           onSubmit={editingRelationship ? handleUpdateRelationship : handleCreateRelationship}
           onCancel={() => {
             setShowRelationshipForm(false)
             setEditingRelationship(null)
+            setPreselectedFromId(null)
           }}
           onDelete={editingRelationship ? handleDeleteRelationship : undefined}
         />
