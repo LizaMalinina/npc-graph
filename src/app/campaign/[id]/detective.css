@@ -695,6 +695,7 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
+  position: relative;
 }
 
 .connection-string {
@@ -711,6 +712,67 @@
 .connection-type {
   color: #6b7280;
   font-size: 0.75rem;
+}
+
+/* Delete connection button */
+.delete-connection-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s ease;
+  margin-left: 0.25rem;
+}
+
+.connection-item:hover .delete-connection-btn {
+  opacity: 1;
+}
+
+.delete-connection-btn:hover {
+  background: rgba(239, 68, 68, 0.6);
+  color: white;
+}
+
+/* Section header with inline add button */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.section-header .section-title {
+  margin-bottom: 0;
+}
+
+.add-connection-inline-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid #a7f3d0;
+  background: rgba(167, 243, 208, 0.2);
+  color: #a7f3d0;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.add-connection-inline-btn:hover {
+  background: rgba(167, 243, 208, 0.4);
+  transform: scale(1.1);
 }
 
 .panel-actions {

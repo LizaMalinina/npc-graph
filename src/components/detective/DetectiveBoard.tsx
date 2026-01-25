@@ -9,6 +9,7 @@ interface DetectiveBoardProps {
   onNodeClick: (node: GraphNode) => void
   onLinkClick: (link: GraphLink) => void
   canEdit: boolean
+  selectedNodeId?: string | null
 }
 
 // Generate a placeholder avatar URL based on name
@@ -60,6 +61,7 @@ export default function DetectiveBoard({
   data,
   filters,
   onNodeClick,
+  selectedNodeId: externalSelectedNodeId,
 }: DetectiveBoardProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [positions, setPositions] = useState<Map<string, { x: number; y: number }>>(new Map())
@@ -67,7 +69,10 @@ export default function DetectiveBoard({
   const [draggingNode, setDraggingNode] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  // Use external selectedNodeId if provided, otherwise use internal state
+  const [internalSelectedNodeId, setInternalSelectedNodeId] = useState<string | null>(null)
+  const selectedNodeId = externalSelectedNodeId !== undefined ? externalSelectedNodeId : internalSelectedNodeId
+  const setSelectedNodeId = setInternalSelectedNodeId
   
   // Zoom and pan state
   const [zoom, setZoom] = useState(1)

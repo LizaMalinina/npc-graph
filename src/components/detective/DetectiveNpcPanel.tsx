@@ -11,12 +11,13 @@ function getPlaceholderAvatar(name: string): string {
 interface DetectiveNpcPanelProps {
   node: GraphNode
   relationships: {
-    from: { type: string; target: GraphNode; description?: string | null }[]
-    to: { type: string; source: GraphNode; description?: string | null }[]
+    from: { id: string; type: string; target: GraphNode; description?: string | null }[]
+    to: { id: string; type: string; source: GraphNode; description?: string | null }[]
   }
   onClose: () => void
   onEdit?: () => void
   onAddConnection?: () => void
+  onDeleteConnection?: (relationshipId: string) => void
   onMemberClick?: (member: GraphNode) => void
   onBackToCrew?: () => void
   parentCrew?: GraphNode | null
@@ -30,6 +31,7 @@ export default function DetectiveNpcPanel({
   onClose,
   onEdit,
   onAddConnection,
+  onDeleteConnection,
   onMemberClick,
   onBackToCrew,
   parentCrew,
@@ -128,9 +130,16 @@ export default function DetectiveNpcPanel({
 
         {/* Connections section - full width */}
         <div className="connections-section compact">
-          <h3 className="section-title">
-            <span className="yarn-icon">🧵</span> Connections
-          </h3>
+          <div className="section-header">
+            <h3 className="section-title">
+              <span className="yarn-icon">🧵</span> Connections
+            </h3>
+            {canEdit && onAddConnection && (
+              <button onClick={onAddConnection} className="add-connection-inline-btn" title="Add Connection">
+                ＋
+              </button>
+            )}
+          </div>
 
           {relationships.from.length === 0 && relationships.to.length === 0 ? (
             <p className="no-connections">No known connections</p>
@@ -159,6 +168,15 @@ export default function DetectiveNpcPanel({
                     />
                     <span className="connection-name">{rel.name}</span>
                     <span className="connection-type">[{rel.type}]</span>
+                    {canEdit && onDeleteConnection && (
+                      <button 
+                        className="delete-connection-btn"
+                        onClick={() => onDeleteConnection(rel.id)}
+                        title="Delete connection"
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
                 ))}
             </div>
@@ -166,18 +184,11 @@ export default function DetectiveNpcPanel({
         </div>
 
         {/* Action buttons */}
-        {canEdit && (
+        {canEdit && onEdit && (
           <div className="panel-actions">
-            {onEdit && (
-              <button onClick={onEdit} className="edit-btn">
-                ✏️ Edit
-              </button>
-            )}
-            {onAddConnection && (
-              <button onClick={onAddConnection} className="add-connection-btn">
-                🧵 Add Connection
-              </button>
-            )}
+            <button onClick={onEdit} className="edit-btn">
+              ✏️ Edit
+            </button>
           </div>
         )}
       </div>
@@ -311,9 +322,16 @@ export default function DetectiveNpcPanel({
 
       {/* Connections section */}
       <div className="connections-section">
-        <h3 className="section-title">
-          <span className="yarn-icon">🧵</span> Known Connections
-        </h3>
+        <div className="section-header">
+          <h3 className="section-title">
+            <span className="yarn-icon">🧵</span> Known Connections
+          </h3>
+          {canEdit && onAddConnection && (
+            <button onClick={onAddConnection} className="add-connection-inline-btn" title="Add Connection">
+              ＋
+            </button>
+          )}
+        </div>
 
         {relationships.from.length === 0 && relationships.to.length === 0 ? (
           <p className="no-connections">No known connections</p>
@@ -342,6 +360,15 @@ export default function DetectiveNpcPanel({
                   />
                   <span className="connection-name">{rel.name}</span>
                   <span className="connection-type">[{rel.type}]</span>
+                  {canEdit && onDeleteConnection && (
+                    <button 
+                      className="delete-connection-btn"
+                      onClick={() => onDeleteConnection(rel.id)}
+                      title="Delete connection"
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               ))}
           </div>
@@ -349,18 +376,11 @@ export default function DetectiveNpcPanel({
       </div>
 
       {/* Action buttons */}
-      {canEdit && (
+      {canEdit && onEdit && (
         <div className="panel-actions">
-          {onEdit && (
-            <button onClick={onEdit} className="edit-btn">
-              ✏️ Edit Case File
-            </button>
-          )}
-          {onAddConnection && (
-            <button onClick={onAddConnection} className="add-connection-btn">
-              🧵 Add Connection
-            </button>
-          )}
+          <button onClick={onEdit} className="edit-btn">
+            ✏️ Edit Case File
+          </button>
         </div>
       )}
     </div>

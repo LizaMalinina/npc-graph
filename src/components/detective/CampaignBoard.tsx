@@ -164,7 +164,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       .map(l => {
         const targetId = typeof l.target === 'object' ? (l.target as { id: string }).id : l.target
         const target = allNodes.find(n => n.id === targetId)
-        return { type: l.type, target: target!, description: l.description }
+        return { id: l.id, type: l.type, target: target!, description: l.description }
       })
       .filter(r => r.target)
 
@@ -176,7 +176,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       .map(l => {
         const sourceId = typeof l.source === 'object' ? (l.source as { id: string }).id : l.source
         const source = allNodes.find(n => n.id === sourceId)
-        return { type: l.type, source: source!, description: l.description }
+        return { id: l.id, type: l.type, source: source!, description: l.description }
       })
       .filter(r => r.source)
 
@@ -406,6 +406,18 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       await deleteRelationship.mutateAsync(editingRelationship.id)
       setShowRelationshipForm(false)
       setEditingRelationship(null)
+    }
+  }
+
+  const handleDeleteConnectionFromPanel = async (relationshipId: string) => {
+    if (!confirm('Are you sure you want to delete this connection?')) {
+      return
+    }
+    try {
+      await deleteRelationship.mutateAsync(relationshipId)
+    } catch (error) {
+      console.error('Failed to delete connection:', error)
+      alert('Failed to delete connection. Please try again.')
     }
   }
 
@@ -690,6 +702,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
               onNodeClick={handleNodeClick}
               onLinkClick={handleLinkClick}
               canEdit={canEdit}
+              selectedNodeId={selectedNode?.id ?? null}
             />
           </div>
 
@@ -716,6 +729,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
                   }}
                   onEdit={handleEditNpc}
                   onAddConnection={handleAddConnectionFromNode}
+                  onDeleteConnection={handleDeleteConnectionFromPanel}
                   onMemberClick={handleMemberClick}
                   onBackToCrew={handleBackToCrew}
                   parentCrew={parentCrewNode}

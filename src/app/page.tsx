@@ -123,11 +123,20 @@ export default function Home() {
     try {
       setIsUploadingEdit(true)
       
-      let imageUrl = editImageUrl || undefined
+      // Determine the imageUrl to send
+      let imageUrl: string | null | undefined
       if (editImage) {
+        // New image uploaded
         const url = await uploadImage(editImage)
-        if (url) imageUrl = url
+        imageUrl = url || undefined
+      } else if (editImageUrl === '' && editingCampaign.imageUrl) {
+        // Image was cleared (had one before, now empty)
+        imageUrl = null
+      } else if (editImageUrl) {
+        // Keep existing image
+        imageUrl = editImageUrl
       }
+      // If imageUrl is undefined, don't update the field
       
       // Update campaign
       await updateCampaign.mutateAsync({

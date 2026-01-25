@@ -75,7 +75,7 @@ export function useUpdateCampaign() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string; imageUrl?: string }) => {
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string; imageUrl?: string | null }) => {
       const res = await fetch(`${API_BASE}/campaigns/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
