@@ -1,14 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react'
-import { GraphData, GraphNode, GraphLink, FilterState, RELATIONSHIP_COLORS } from '@/types'
+import { GraphData, GraphNode, FilterState, RELATIONSHIP_COLORS } from '@/types'
 
 interface DetectiveBoardProps {
   data: GraphData
   filters: FilterState
   onNodeClick: (node: GraphNode) => void
-  onLinkClick: (link: GraphLink) => void
-  canEdit: boolean
   selectedNodeId?: string | null
 }
 
@@ -84,8 +82,9 @@ export default function DetectiveBoard({
   
   // Track mouse position for click vs drag detection
   const mouseDownPos = useRef<{ x: number; y: number } | null>(null)
+  const didDrag = useRef(false) // Track if actual dragging happened
   const DRAG_THRESHOLD = 5 // pixels - if mouse moves less than this, it's a click
-  const TOUCH_TAP_THRESHOLD = 15 // pixels - higher threshold for touch (less precise)
+  const TOUCH_TAP_THRESHOLD = 25 // pixels - higher threshold for touch (less precise)
   
   // Touch state for pinch zoom and touch interactions
   const lastTouchDistance = useRef<number | null>(null)
@@ -395,6 +394,8 @@ export default function DetectiveBoard({
 
   // Touch handlers for mobile support
   const handleTouchStart = useCallback((e: React.TouchEvent, nodeId?: string) => {
+    didDrag.current = false // Reset drag tracking
+    
     if (e.touches.length === 2) {
       // Pinch zoom - calculate initial distance between fingers
       const touch1 = e.touches[0]
@@ -458,7 +459,16 @@ export default function DetectiveBoard({
     } else if (e.touches.length === 1) {
       const touch = e.touches[0]
       
-      if (draggingNode) {
+      // Check if we moved enough to count as a drag
+      if (touchStartPos.current) {
+        const dx = Math.abs(touch.clientX - touchStartPos.current.x)
+        const dy = Math.abs(touch.clientY - touchStartPos.current.y)
+        if (dx > TOUCH_TAP_THRESHOLD || dy > TOUCH_TAP_THRESHOLD) {
+          didDrag.current = true
+        }
+      }
+      
+      if (draggingNode && didDrag.current) {
         // Dragging a node
         e.preventDefault()
         const rect = containerRef.current?.getBoundingClientRect()
@@ -473,17 +483,18 @@ export default function DetectiveBoard({
         }
       } else if (isPanning) {
         // Panning the board
+        didDrag.current = true
         setPan({
           x: touch.clientX - panStart.x,
           y: touch.clientY - panStart.y
         })
       }
     }
-  }, [zoom, pan, draggingNode, isPanning, dragOffset, panStart])
+  }, [zoom, pan, draggingNode, isPanning, dragOffset, panStart, TOUCH_TAP_THRESHOLD])
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     // Check if this was a tap (minimal movement) vs a drag
-    if (e.changedTouches.length > 0 && touchStartPos.current) {
+    if (e.changedTouches.length > 0 && touchStartPos.current && !didDrag.current) {
       const touch = e.changedTouches[0]
       const wasTap = 
         Math.abs(touch.clientX - touchStartPos.current.x) < TOUCH_TAP_THRESHOLD &&
@@ -505,6 +516,7 @@ export default function DetectiveBoard({
     lastTouchDistance.current = null
     touchStartPos.current = null
     touchNodeId.current = null
+    didDrag.current = false
     setDraggingNode(null)
     setIsPanning(false)
   }, [filteredNodes, onNodeClick, TOUCH_TAP_THRESHOLD])
@@ -646,6 +658,14 @@ export default function DetectiveBoard({
               zIndex: isSelected ? 100 : isHovered ? 50 : isCrew ? 15 : 10,
               transition: draggingNode === node.id ? 'none' : 'transform 0.2s ease, opacity 0.3s ease, z-index 0s',
               cursor: draggingNode === node.id ? 'grabbing' : 'pointer',
+            }}
+            onClick={(e) => {
+              // Only handle click if we weren't dragging
+              if (!didDrag.current) {
+                e.stopPropagation()
+                setSelectedNodeId(node.id)
+                onNodeClick(node)
+              }
             }}
             onMouseDown={(e) => handleMouseDown(e, node.id)}
             onMouseEnter={() => setHoveredNode(node.id)}

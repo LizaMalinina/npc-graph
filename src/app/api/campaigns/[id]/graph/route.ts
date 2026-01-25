@@ -1,16 +1,25 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// GET graph data for a specific campaign
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
+// Helper to find campaign by id or slug
+async function findCampaignWithData(idOrSlug: string) {
+  // Try by id first (cuid format), then by slug
+  let campaign = await prisma.campaign.findUnique({
+    where: { id: idOrSlug },
+    include: {
+      crew: {
+        include: {
+          members: true,
+          relationshipsFrom: true
+        }
+      },
+      npcs: true
+    }
+  })
   
-  try {
-    const campaign = await prisma.campaign.findUnique({
-      where: { id },
+  if (!campaign) {
+    campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
       include: {
         crew: {
           include: {
@@ -21,6 +30,20 @@ export async function GET(
         npcs: true
       }
     })
+  }
+  
+  return campaign
+}
+
+// GET graph data for a specific campaign
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  
+  try {
+    const campaign = await findCampaignWithData(id)
     
     if (!campaign) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })

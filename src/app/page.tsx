@@ -89,7 +89,7 @@ export default function Home() {
       setNewCrewName('The Party')
       setNewCampaignImage(null)
       setNewCampaignImagePreview(null)
-      router.push(`/campaign/${campaign.id}`)
+      router.push(`/campaign/${campaign.slug || campaign.id}`)
     } catch (error) {
       console.error('Failed to create campaign:', error)
       setCreateError('Failed to create campaign. Please try again.')

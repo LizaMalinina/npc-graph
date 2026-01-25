@@ -66,3 +66,36 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to delete crew member relationship' }, { status: 500 })
   }
 }
+
+// PUT update crew member relationship by ID
+export async function PUT(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    
+    if (!id) {
+      return NextResponse.json({ error: 'ID is required' }, { status: 400 })
+    }
+    
+    const body = await request.json()
+    const { type, description, strength } = body
+    
+    const relationship = await prisma.crewMemberRelationship.update({
+      where: { id },
+      data: {
+        type,
+        description,
+        strength,
+      },
+      include: {
+        crewMember: true,
+        toNpc: true,
+      },
+    })
+    
+    return NextResponse.json(relationship)
+  } catch (error) {
+    console.error('Error updating crew member relationship:', error)
+    return NextResponse.json({ error: 'Failed to update crew member relationship' }, { status: 500 })
+  }
+}

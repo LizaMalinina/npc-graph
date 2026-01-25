@@ -25,6 +25,8 @@ import {
   useCreateCrewMemberRelationship,
   useDeleteCrewRelationship,
   useDeleteCrewMemberRelationship,
+  useUpdateCrewRelationship,
+  useUpdateCrewMemberRelationship,
 } from '@/hooks/useApi'
 
 interface CampaignBoardProps {
@@ -105,6 +107,8 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const deleteRelationship = useDeleteRelationship()
   const deleteCrewRelationship = useDeleteCrewRelationship()
   const deleteCrewMemberRelationship = useDeleteCrewMemberRelationship()
+  const updateCrewRelationship = useUpdateCrewRelationship()
+  const updateCrewMemberRelationship = useUpdateCrewMemberRelationship()
   const createCrewRelationship = useCreateCrewRelationship()
   const createCrewMemberRelationship = useCreateCrewMemberRelationship()
 
@@ -193,12 +197,6 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       setParentCrewNode(null)
     }
     setSelectedNode(node)
-  }
-
-  const handleLinkClick = (link: GraphLink) => {
-    setEditingRelationship(link)
-    setPreselectedFromId(null)
-    setShowRelationshipForm(true)
   }
 
   const handleMemberClick = (member: GraphNode) => {
@@ -392,24 +390,54 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
     strength: number
   }) => {
     if (editingRelationship) {
-      await updateRelationship.mutateAsync({ 
-        id: editingRelationship.id, 
-        data: {
-          type: relData.type,
-          description: relData.description,
-          strength: relData.strength,
+      const relationshipId = editingRelationship.id
+      const updateData = {
+        type: relData.type,
+        description: relData.description,
+        strength: relData.strength,
+      }
+      
+      try {
+        // Parse the relationship ID to determine the type
+        if (relationshipId.startsWith('crew-rel-')) {
+          const actualId = relationshipId.replace('crew-rel-', '')
+          await updateCrewRelationship.mutateAsync({ id: actualId, data: updateData })
+        } else if (relationshipId.startsWith('member-rel-')) {
+          const actualId = relationshipId.replace('member-rel-', '')
+          await updateCrewMemberRelationship.mutateAsync({ id: actualId, data: updateData })
+        } else {
+          // Regular NPC relationship
+          await updateRelationship.mutateAsync({ id: relationshipId, data: updateData })
         }
-      })
-      setShowRelationshipForm(false)
-      setEditingRelationship(null)
+        setShowRelationshipForm(false)
+        setEditingRelationship(null)
+      } catch (error) {
+        console.error('Failed to update relationship:', error)
+      }
     }
   }
 
   const handleDeleteRelationship = async () => {
     if (editingRelationship) {
-      await deleteRelationship.mutateAsync(editingRelationship.id)
-      setShowRelationshipForm(false)
-      setEditingRelationship(null)
+      const relationshipId = editingRelationship.id
+      
+      try {
+        // Parse the relationship ID to determine the type
+        if (relationshipId.startsWith('crew-rel-')) {
+          const actualId = relationshipId.replace('crew-rel-', '')
+          await deleteCrewRelationship.mutateAsync(actualId)
+        } else if (relationshipId.startsWith('member-rel-')) {
+          const actualId = relationshipId.replace('member-rel-', '')
+          await deleteCrewMemberRelationship.mutateAsync(actualId)
+        } else {
+          // Regular NPC relationship
+          await deleteRelationship.mutateAsync(relationshipId)
+        }
+        setShowRelationshipForm(false)
+        setEditingRelationship(null)
+      } catch (error) {
+        console.error('Failed to delete relationship:', error)
+      }
     }
   }
 
@@ -742,8 +770,6 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
               data={data}
               filters={filters}
               onNodeClick={handleNodeClick}
-              onLinkClick={handleLinkClick}
-              canEdit={canEdit}
               selectedNodeId={selectedNode?.id ?? null}
             />
           </div>

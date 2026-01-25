@@ -6,14 +6,28 @@ interface PageProps {
   params: Promise<{ id: string }>
 }
 
+// Helper to find campaign by id or slug
+async function findCampaignMetadata(idOrSlug: string) {
+  let campaign = await prisma.campaign.findUnique({
+    where: { id: idOrSlug },
+    select: { name: true, description: true }
+  })
+  
+  if (!campaign) {
+    campaign = await prisma.campaign.findUnique({
+      where: { slug: idOrSlug },
+      select: { name: true, description: true }
+    })
+  }
+  
+  return campaign
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params
   
   try {
-    const campaign = await prisma.campaign.findUnique({
-      where: { id },
-      select: { name: true, description: true }
-    })
+    const campaign = await findCampaignMetadata(id)
     
     if (campaign) {
       return {

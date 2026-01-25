@@ -105,18 +105,6 @@ export function useCampaignGraphData(campaignId: string) {
 
 // ============ NPCs ============
 
-// Fetch all NPCs
-export function useNpcs() {
-  return useQuery<Npc[]>({
-    queryKey: ['npcs'],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/npcs`)
-      if (!res.ok) throw new Error('Failed to fetch NPCs')
-      return res.json()
-    },
-  })
-}
-
 // Fetch single NPC
 export function useNpc(id: string | null) {
   return useQuery<Npc>({
@@ -257,39 +245,6 @@ export function useDeleteRelationship() {
 
 // ============ CREW HOOKS ============
 
-// Fetch all crews
-export function useCrews() {
-  return useQuery<Crew[]>({
-    queryKey: ['crews'],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/crews`)
-      if (!res.ok) throw new Error('Failed to fetch crews')
-      return res.json()
-    },
-  })
-}
-
-// Create Crew
-export function useCreateCrew() {
-  const queryClient = useQueryClient()
-  
-  return useMutation({
-    mutationFn: async (data: Partial<Crew> & { members?: { name: string; title?: string; imageUrl?: string }[] }) => {
-      const res = await fetch(`${API_BASE}/crews`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) throw new Error('Failed to create crew')
-      return res.json()
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['crews'], refetchType: 'active' })
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
-    },
-  })
-}
-
 // Update Crew
 export function useUpdateCrew() {
   const queryClient = useQueryClient()
@@ -302,25 +257,6 @@ export function useUpdateCrew() {
         body: JSON.stringify(data),
       })
       if (!res.ok) throw new Error('Failed to update crew')
-      return res.json()
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['crews'], refetchType: 'active' })
-      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
-    },
-  })
-}
-
-// Delete Crew
-export function useDeleteCrew() {
-  const queryClient = useQueryClient()
-  
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`${API_BASE}/crews/${id}`, {
-        method: 'DELETE',
-      })
-      if (!res.ok) throw new Error('Failed to delete crew')
       return res.json()
     },
     onSuccess: () => {
@@ -432,6 +368,26 @@ export function useDeleteCrewRelationship() {
   })
 }
 
+// Update Crew Relationship
+export function useUpdateCrewRelationship() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { type: string; description?: string; strength: number } }) => {
+      const res = await fetch(`${API_BASE}/crew-relationships?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to update crew relationship')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
+    },
+  })
+}
+
 // Create Crew Member Relationship (crew member to NPC)
 export function useCreateCrewMemberRelationship() {
   const queryClient = useQueryClient()
@@ -462,6 +418,26 @@ export function useDeleteCrewMemberRelationship() {
         method: 'DELETE',
       })
       if (!res.ok) throw new Error('Failed to delete crew member relationship')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
+    },
+  })
+}
+
+// Update Crew Member Relationship
+export function useUpdateCrewMemberRelationship() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { type: string; description?: string; strength: number } }) => {
+      const res = await fetch(`${API_BASE}/crew-member-relationships?id=${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to update crew member relationship')
       return res.json()
     },
     onSuccess: () => {
