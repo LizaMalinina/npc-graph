@@ -1051,6 +1051,51 @@
   transform: scale(0.98);
 }
 
+/* Mobile Legend Panel */
+.mobile-legend-panel {
+  max-height: 40vh;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #2d4a3a 0%, #1f352a 100%);
+  border-bottom: 3px solid #1a2d22;
+  padding: 0.75rem;
+}
+
+.mobile-legend-panel .legend-panel {
+  margin: 0;
+  box-shadow: none;
+}
+
+/* Mobile Role Menu */
+.mobile-role-menu {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(180deg, #1f352a 0%, #2d4a3a 100%);
+  border-bottom: 2px solid #1a2d22;
+}
+
+.mobile-role-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 1px solid #a7f3d0;
+  background: rgba(167, 243, 208, 0.15);
+  color: #a7f3d0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.mobile-role-btn.active {
+  background: rgba(167, 243, 208, 0.4);
+  border-color: #d1fae5;
+}
+
+.mobile-role-btn:active {
+  transform: scale(0.98);
+}
+
 /* Mobile Filter Panel */
 .mobile-filter-panel {
   max-height: 40vh;
@@ -1222,4 +1267,204 @@
     width: 52px;
     height: 52px;
   }
+}
+
+/* ============================================ */
+/* Mobile Panel Horizontal Layout */
+/* ============================================ */
+
+.detective-npc-panel.mobile-panel {
+  padding: 0.75rem;
+}
+
+.detective-npc-panel.mobile-panel .case-file-header {
+  margin-bottom: 0.5rem;
+}
+
+/* Horizontal layout container */
+.mobile-content-layout {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Left side - photo section */
+.mobile-photo-section {
+  flex-shrink: 0;
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-panel .suspect-photo-wrapper {
+  width: 120px;
+  height: 140px;
+  position: relative;
+}
+
+.mobile-panel .suspect-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 2px solid #f5f0e6;
+}
+
+.mobile-panel .status-stamp {
+  font-size: 0.6rem;
+  padding: 0.15rem 0.3rem;
+}
+
+/* Quick info under photo */
+.mobile-quick-info {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.mobile-quick-info .status-badge {
+  font-size: 0.65rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  background: rgba(167, 243, 208, 0.2);
+  color: #a7f3d0;
+}
+
+.mobile-quick-info .status-badge.status-dead {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.mobile-quick-info .status-badge.status-unknown {
+  background: rgba(234, 179, 8, 0.2);
+  color: #eab308;
+}
+
+.mobile-quick-info .type-badge {
+  font-size: 0.9rem;
+  padding: 0.2rem 0.3rem;
+  background: rgba(59, 130, 246, 0.2);
+  border-radius: 3px;
+}
+
+.mobile-quick-info .type-badge.crew-member-type {
+  background: rgba(168, 85, 247, 0.2);
+}
+
+/* Right side - details section */
+.mobile-details-section {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mobile-panel .suspect-name {
+  font-size: 1.1rem;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.mobile-panel .suspect-title {
+  font-size: 0.8rem;
+  margin: 0;
+  color: #a7f3d0;
+  opacity: 0.8;
+}
+
+.mobile-description {
+  font-size: 0.75rem;
+  color: #d1d5db;
+  line-height: 1.4;
+  margin: 0.25rem 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.mobile-detail-row {
+  display: flex;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  align-items: center;
+}
+
+.mobile-detail-row .detail-label {
+  color: #9ca3af;
+  font-size: 0.7rem;
+}
+
+.mobile-detail-row .faction-badge {
+  background: rgba(167, 243, 208, 0.2);
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+}
+
+.mobile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.mobile-tags .evidence-tag {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.3rem;
+}
+
+/* Compact connections section */
+.connections-section.compact {
+  margin-bottom: 0.5rem;
+}
+
+.connections-section.compact .section-title {
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+.connections-list.horizontal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.connections-list.horizontal .connection-item {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.7rem;
+}
+
+.connections-list.horizontal .connection-string {
+  width: 8px;
+  height: 8px;
+}
+
+/* Mobile panel actions */
+.mobile-panel .panel-actions {
+  padding: 0.5rem 0 0 0;
+}
+
+.mobile-panel .edit-btn {
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+}
+
+/* Description section for desktop */
+.description-section {
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  border-left: 3px solid #a7f3d0;
+}
+
+.description-text {
+  font-size: 0.85rem;
+  color: #d1d5db;
+  line-height: 1.5;
+  margin: 0;
+  font-style: italic;
 }

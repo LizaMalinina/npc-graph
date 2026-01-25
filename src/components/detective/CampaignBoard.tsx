@@ -37,6 +37,8 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const [isMobile, setIsMobile] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const [showMobileLegend, setShowMobileLegend] = useState(false)
+  const [showMobileRoles, setShowMobileRoles] = useState(false)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
 
   // Detect mobile on mount and resize
@@ -54,8 +56,18 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
     if (isMobile) {
       setShowMobileMenu(false)
       setShowMobileFilters(false)
+      setShowMobileLegend(false)
+      setShowMobileRoles(false)
     }
   }, [selectedNode, isMobile])
+
+  // Helper to toggle mobile menus exclusively
+  const toggleMobilePanel = (panel: 'menu' | 'filters' | 'legend' | 'roles') => {
+    setShowMobileMenu(panel === 'menu' ? !showMobileMenu : false)
+    setShowMobileFilters(panel === 'filters' ? !showMobileFilters : false)
+    setShowMobileLegend(panel === 'legend' ? !showMobileLegend : false)
+    setShowMobileRoles(panel === 'roles' ? !showMobileRoles : false)
+  }
 
   const [filters, setFilters] = useState<FilterState>({
     factions: [],
@@ -453,19 +465,35 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
             {isMobile ? (
               <>
                 <button
-                  onClick={() => setShowMobileFilters(!showMobileFilters)}
+                  onClick={() => toggleMobilePanel('filters')}
                   className={`toolbar-btn mobile-btn ${showMobileFilters ? 'active' : ''}`}
+                  title="Search & Filter"
                 >
                   🔍
                 </button>
                 {canEdit && (
                   <button
-                    onClick={() => setShowMobileMenu(!showMobileMenu)}
+                    onClick={() => toggleMobilePanel('menu')}
                     className={`toolbar-btn mobile-btn ${showMobileMenu ? 'active' : ''}`}
+                    title="Add"
                   >
                     ＋
                   </button>
                 )}
+                <button
+                  onClick={() => toggleMobilePanel('legend')}
+                  className={`toolbar-btn mobile-btn ${showMobileLegend ? 'active' : ''}`}
+                  title="Legend"
+                >
+                  🏷️
+                </button>
+                <button
+                  onClick={() => toggleMobilePanel('roles')}
+                  className={`toolbar-btn mobile-btn ${showMobileRoles ? 'active' : ''}`}
+                  title="Role"
+                >
+                  {userRole === 'viewer' ? '👁️' : userRole === 'editor' ? '✏️' : '👑'}
+                </button>
               </>
             ) : (
               <>
@@ -512,14 +540,36 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
             >
               🧵 Add Connection
             </button>
+          </div>
+        )}
+
+        {/* Mobile legend panel */}
+        {isMobile && showMobileLegend && (
+          <div className="mobile-legend-panel">
+            <DetectiveLegend onClose={() => setShowMobileLegend(false)} />
+          </div>
+        )}
+
+        {/* Mobile role selector */}
+        {isMobile && showMobileRoles && (
+          <div className="mobile-role-menu">
             <button
-              onClick={() => {
-                setShowLegend(true)
-                setShowMobileMenu(false)
-              }}
-              className="mobile-action-btn legend-btn"
+              onClick={() => { setUserRole('viewer'); setShowMobileRoles(false) }}
+              className={`mobile-role-btn ${userRole === 'viewer' ? 'active' : ''}`}
             >
-              🏷️ Legend
+              👁️ Viewer
+            </button>
+            <button
+              onClick={() => { setUserRole('editor'); setShowMobileRoles(false) }}
+              className={`mobile-role-btn ${userRole === 'editor' ? 'active' : ''}`}
+            >
+              ✏️ Editor
+            </button>
+            <button
+              onClick={() => { setUserRole('admin'); setShowMobileRoles(false) }}
+              className={`mobile-role-btn ${userRole === 'admin' ? 'active' : ''}`}
+            >
+              👑 Admin
             </button>
           </div>
         )}
@@ -597,6 +647,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
                 onBackToCrew={handleBackToCrew}
                 parentCrew={parentCrewNode}
                 canEdit={canEdit}
+                isMobile={isMobile}
               />
             </div>
           )}
