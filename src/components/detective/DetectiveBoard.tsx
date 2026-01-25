@@ -660,8 +660,8 @@ export default function DetectiveBoard({
               cursor: draggingNode === node.id ? 'grabbing' : 'pointer',
             }}
             onClick={(e) => {
-              // Only handle click if we weren't dragging
-              if (!didDrag.current) {
+              // For mouse clicks only - touch is handled separately
+              if (!('ontouchstart' in window)) {
                 e.stopPropagation()
                 setSelectedNodeId(node.id)
                 onNodeClick(node)
@@ -675,26 +675,54 @@ export default function DetectiveBoard({
               didDrag.current = false
               touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
               touchNodeId.current = node.id
+              // Also set up for potential drag
+              const pos = positions.get(node.id)
+              if (pos) {
+                const rect = containerRef.current?.getBoundingClientRect()
+                if (rect) {
+                  setDragOffset({
+                    x: (e.touches[0].clientX - rect.left - pan.x) / zoom - pos.x,
+                    y: (e.touches[0].clientY - rect.top - pan.y) / zoom - pos.y
+                  })
+                  setDraggingNode(node.id)
+                }
+              }
             }}
             onTouchMove={(e) => {
-              // Check if we moved enough to count as drag
-              if (touchStartPos.current) {
-                const dx = Math.abs(e.touches[0].clientX - touchStartPos.current.x)
-                const dy = Math.abs(e.touches[0].clientY - touchStartPos.current.y)
+              e.stopPropagation()
+              if (touchStartPos.current && e.touches.length === 1) {
+                const touch = e.touches[0]
+                const dx = Math.abs(touch.clientX - touchStartPos.current.x)
+                const dy = Math.abs(touch.clientY - touchStartPos.current.y)
                 if (dx > TOUCH_TAP_THRESHOLD || dy > TOUCH_TAP_THRESHOLD) {
                   didDrag.current = true
+                  // Actually move the node
+                  e.preventDefault()
+                  const rect = containerRef.current?.getBoundingClientRect()
+                  if (rect && draggingNode) {
+                    const newX = (touch.clientX - rect.left - pan.x) / zoom - dragOffset.x
+                    const newY = (touch.clientY - rect.top - pan.y) / zoom - dragOffset.y
+                    setPositions(prev => {
+                      const updated = new Map(prev)
+                      updated.set(draggingNode, { x: newX, y: newY })
+                      return updated
+                    })
+                  }
                 }
               }
             }}
             onTouchEnd={(e) => {
-              // Handle tap on node directly
               e.stopPropagation()
-              if (!didDrag.current) {
+              // If we didn't drag, this was a tap - select the node
+              if (!didDrag.current && touchNodeId.current === node.id) {
                 setSelectedNodeId(node.id)
                 onNodeClick(node)
               }
+              // Reset state
+              setDraggingNode(null)
               touchStartPos.current = null
               touchNodeId.current = null
+              didDrag.current = false
             }}
           >
             {/* Push pin */}
