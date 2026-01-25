@@ -1,0 +1,31 @@
+
+name: Promote to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag (commit SHA) to deploy'
+        required: true
+
+jobs:
+  deploy-prod:
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to npc-graph-prod
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name npc-graph-prod \
+              --resource-group npc-graph \
+              --image npcgraphcr.azurecr.io/npc-graph:${{ inputs.image_tag }}
