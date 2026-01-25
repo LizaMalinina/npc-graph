@@ -1129,10 +1129,10 @@
 
 /* Mobile toolbar button styles */
 .toolbar-btn.mobile-btn {
-  padding: 0.5rem 0.75rem;
-  font-size: 1.25rem;
-  min-width: 44px;
-  min-height: 44px;
+  padding: 0.4rem 0.6rem;
+  font-size: 1.1rem;
+  min-width: 40px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1141,6 +1141,25 @@
 .toolbar-btn.mobile-btn.active {
   background: rgba(167, 243, 208, 0.4);
   border-color: #d1fae5;
+}
+
+/* Mobile toolbar icons row */
+.mobile-toolbar-icons {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: linear-gradient(180deg, #1f352a 0%, #2d4a3a 100%);
+  border-bottom: 2px solid #1a2d22;
+}
+
+/* Mobile toolbar adjustments */
+.detective-toolbar.mobile-toolbar {
+  padding: 0.5rem 0.75rem;
+}
+
+.detective-toolbar.mobile-toolbar .toolbar-right {
+  display: none;
 }
 
 /* Mobile detail panel (bottom sheet) */

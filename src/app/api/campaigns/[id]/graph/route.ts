@@ -68,7 +68,7 @@ export async function GET(
     const crewNodes = campaign.crew ? [{
       id: `crew-${campaign.crew.id}`,
       name: campaign.crew.name,
-      title: `Crew (${campaign.crew.members.length} members)`,
+      title: `${campaign.crew.members.length} members`,
       description: campaign.crew.description,
       imageUrl: campaign.crew.imageUrl,
       faction: null,

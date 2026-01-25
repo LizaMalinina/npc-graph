@@ -8,7 +8,7 @@ import DetectiveNpcPanel from '@/components/detective/DetectiveNpcPanel'
 import DetectiveLegend from '@/components/detective/DetectiveLegend'
 import NpcForm from '@/components/NpcForm'
 import RelationshipForm from '@/components/RelationshipForm'
-import { GraphNode, GraphLink, FilterState, Npc, Crew } from '@/types'
+import { GraphNode, GraphLink, FilterState, Npc, Crew, GraphData } from '@/types'
 import {
   useCampaignGraphData,
   useCampaign,
@@ -124,7 +124,34 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       return { from: [], to: [] }
     }
 
-    let relevantLinks = graphData.links
+    // Get all possible links including crew links
+    let allLinks = [...graphData.links]
+    const extendedData = graphData as GraphData & { 
+      crewLinks?: GraphLink[]
+      memberLinks?: GraphLink[]
+      crews?: GraphNode[]
+      crewMemberNodes?: GraphNode[]
+    }
+    
+    // Include crew links if available
+    if (extendedData.crewLinks) {
+      allLinks = [...allLinks, ...extendedData.crewLinks]
+    }
+    // Include member links if available
+    if (extendedData.memberLinks) {
+      allLinks = [...allLinks, ...extendedData.memberLinks]
+    }
+    
+    // Get all possible nodes including crews and members
+    let allNodes = [...graphData.nodes]
+    if (extendedData.crews) {
+      allNodes = [...allNodes, ...extendedData.crews]
+    }
+    if (extendedData.crewMemberNodes) {
+      allNodes = [...allNodes, ...extendedData.crewMemberNodes]
+    }
+
+    let relevantLinks = allLinks
     if (filters.relationshipTypes.length > 0) {
       relevantLinks = relevantLinks.filter(l => filters.relationshipTypes.includes(l.type))
     }
@@ -136,7 +163,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       })
       .map(l => {
         const targetId = typeof l.target === 'object' ? (l.target as { id: string }).id : l.target
-        const target = graphData.nodes.find(n => n.id === targetId)
+        const target = allNodes.find(n => n.id === targetId)
         return { type: l.type, target: target!, description: l.description }
       })
       .filter(r => r.target)
@@ -148,7 +175,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       })
       .map(l => {
         const sourceId = typeof l.source === 'object' ? (l.source as { id: string }).id : l.source
-        const source = graphData.nodes.find(n => n.id === sourceId)
+        const source = allNodes.find(n => n.id === sourceId)
         return { type: l.type, source: source!, description: l.description }
       })
       .filter(r => r.source)
@@ -430,6 +457,27 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
     }
   }, [graphData, filters.crewViewMode, filters.showCrewMembersOnly, filters.showNpcsOnly])
 
+  // All nodes for relationship form (includes all regardless of view mode)
+  const allNodesForForm = useMemo(() => {
+    if (!graphData) return []
+    
+    const extendedData = graphData as typeof graphData & {
+      crews?: GraphNode[]
+      crewMemberNodes?: GraphNode[]
+    }
+    
+    let nodes: GraphNode[] = graphData.nodes.map(n => ({ ...n, nodeType: n.nodeType || 'npc' as const }))
+    
+    if (extendedData.crews) {
+      nodes = [...nodes, ...extendedData.crews.map(c => ({ ...c, nodeType: 'crew' as const }))]
+    }
+    if (extendedData.crewMemberNodes) {
+      nodes = [...nodes, ...extendedData.crewMemberNodes.map(m => ({ ...m, nodeType: 'crew-member' as const }))]
+    }
+    
+    return nodes
+  }, [graphData])
+
   if (isLoading) {
     return (
       <div className="detective-loading">
@@ -455,7 +503,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
     <div className={`detective-page ${isMobile ? 'is-mobile' : ''}`}>
       <div className="wood-frame">
         {/* Top toolbar */}
-        <div className="detective-toolbar">
+        <div className={`detective-toolbar ${isMobile ? 'mobile-toolbar' : ''}`}>
           <div className="toolbar-left">
             <Link href="/" className="nav-link">
               {isMobile ? '←' : '← Campaigns'}
@@ -471,61 +519,62 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
               </span>
             </div>
           )}
-          <div className="toolbar-right">
-            {isMobile ? (
-              <>
-                <button
-                  onClick={() => toggleMobilePanel('filters')}
-                  className={`toolbar-btn mobile-btn ${showMobileFilters ? 'active' : ''}`}
-                  title="Search & Filter"
-                >
-                  🔍
-                </button>
-                {canEdit && (
-                  <button
-                    onClick={() => toggleMobilePanel('menu')}
-                    className={`toolbar-btn mobile-btn ${showMobileMenu ? 'active' : ''}`}
-                    title="Add"
-                  >
-                    ＋
-                  </button>
-                )}
-                <button
-                  onClick={() => toggleMobilePanel('legend')}
-                  className={`toolbar-btn mobile-btn ${showMobileLegend ? 'active' : ''}`}
-                  title="Legend"
-                >
-                  🏷️
-                </button>
-                <button
-                  onClick={() => toggleMobilePanel('roles')}
-                  className={`toolbar-btn mobile-btn ${showMobileRoles ? 'active' : ''}`}
-                  title="Role"
-                >
-                  {userRole === 'viewer' ? '👁️' : userRole === 'editor' ? '✏️' : '👑'}
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => setShowLegend(!showLegend)}
-                  className="toolbar-btn"
-                >
-                  🏷️ Legend
-                </button>
-                <select
-                  value={userRole}
-                  onChange={e => setUserRole(e.target.value as 'viewer' | 'editor' | 'admin')}
-                  className="role-select"
-                >
-                  <option value="viewer">👁️ Viewer</option>
-                  <option value="editor">✏️ Editor</option>
-                  <option value="admin">👑 Admin</option>
-                </select>
-              </>
-            )}
-          </div>
+          {!isMobile && (
+            <div className="toolbar-right">
+              <button
+                onClick={() => setShowLegend(!showLegend)}
+                className="toolbar-btn"
+              >
+                🏷️ Legend
+              </button>
+              <select
+                value={userRole}
+                onChange={e => setUserRole(e.target.value as 'viewer' | 'editor' | 'admin')}
+                className="role-select"
+              >
+                <option value="viewer">👁️ Viewer</option>
+                <option value="editor">✏️ Editor</option>
+                <option value="admin">👑 Admin</option>
+              </select>
+            </div>
+          )}
         </div>
+
+        {/* Mobile toolbar icons - second row */}
+        {isMobile && (
+          <div className="mobile-toolbar-icons">
+            <button
+              onClick={() => toggleMobilePanel('filters')}
+              className={`toolbar-btn mobile-btn ${showMobileFilters ? 'active' : ''}`}
+              title="Search & Filter"
+            >
+              🔍
+            </button>
+            {canEdit && (
+              <button
+                onClick={() => toggleMobilePanel('menu')}
+                className={`toolbar-btn mobile-btn ${showMobileMenu ? 'active' : ''}`}
+                title="Add"
+              >
+                ＋
+              </button>
+            )}
+            <button
+              onClick={() => toggleMobilePanel('legend')}
+              className={`toolbar-btn mobile-btn ${showMobileLegend ? 'active' : ''}`}
+              title="Legend"
+            >
+              🏷️
+            </button>
+            <button
+              onClick={() => toggleMobilePanel('roles')}
+              className={`toolbar-btn mobile-btn ${showMobileRoles ? 'active' : ''}`}
+              title="Role"
+            >
+              {userRole === 'viewer' ? '👁️' : userRole === 'editor' ? '✏️' : '👑'}
+            </button>
+          </div>
+        )}
 
         {/* Mobile action menu */}
         {isMobile && showMobileMenu && canEdit && (
@@ -707,7 +756,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
 
       {showRelationshipForm && (
         <RelationshipForm
-          nodes={data.nodes}
+          nodes={allNodesForForm}
           relationship={editingRelationship}
           preselectedFromId={preselectedFromId || undefined}
           onSubmit={editingRelationship ? handleUpdateRelationship : handleCreateRelationship}

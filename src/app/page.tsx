@@ -195,6 +195,16 @@ export default function Home() {
               onClick={() => router.push(`/campaign/${campaign.id}`)}
               className="campaign-card"
             >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openEditModal(campaign)
+                }}
+                className="campaign-edit-btn"
+                title="Edit campaign"
+              >
+                ✏️
+              </button>
               <div className="campaign-card-icon">
                 {campaign.imageUrl ? (
                   <img src={campaign.imageUrl} alt="" className="campaign-icon-img" />
@@ -206,16 +216,6 @@ export default function Home() {
                 <span>👥 {campaign.crew?.name || 'No crew'} ({campaign.crew?._count?.members || 0})</span>
                 <span>🎭 {campaign._count?.npcs || 0} NPCs</span>
               </div>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                openEditModal(campaign)
-              }}
-              className="campaign-edit-btn"
-              title="Edit campaign"
-            >
-              ⚙️
             </button>
           </div>
         ))}

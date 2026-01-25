@@ -89,6 +89,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-height: 180px;
+  position: relative;
 }
 
 .campaign-card:hover {
@@ -142,29 +144,29 @@ body {
 
 .campaign-edit-btn {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  background: rgba(100, 116, 139, 0.2);
-  border: 1px solid rgba(100, 116, 139, 0.4);
-  border-radius: 8px;
-  width: 36px;
-  height: 36px;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: rgba(100, 116, 139, 0.3);
+  border: 1px solid rgba(100, 116, 139, 0.5);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
   cursor: pointer;
   opacity: 0;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 0.9rem;
   z-index: 10;
 }
 
-.campaign-card-wrapper:hover .campaign-edit-btn {
+.campaign-card:hover .campaign-edit-btn {
   opacity: 1;
 }
 
 .campaign-edit-btn:hover {
-  background: rgba(100, 116, 139, 0.4);
+  background: rgba(100, 116, 139, 0.5);
   border-color: #94a3b8;
   transform: scale(1.1);
 }
