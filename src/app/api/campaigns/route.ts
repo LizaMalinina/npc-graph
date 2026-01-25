@@ -33,7 +33,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, description, crewName } = body
+    const { name, description, crewName, imageUrl } = body
     
     if (!name) {
       return NextResponse.json({ error: 'Campaign name is required' }, { status: 400 })
@@ -44,6 +44,7 @@ export async function POST(request: Request) {
       data: {
         name,
         description,
+        imageUrl,
         crew: {
           create: {
             name: crewName || 'The Party',

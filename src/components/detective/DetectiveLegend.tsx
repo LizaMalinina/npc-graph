@@ -2,16 +2,11 @@
 
 import { RELATIONSHIP_COLORS } from '@/types'
 
-interface DetectiveLegendProps {
-  onClose: () => void
-}
-
-export default function DetectiveLegend({ onClose }: DetectiveLegendProps) {
+export default function DetectiveLegend() {
   return (
     <div className="detective-legend">
       <div className="legend-header">
         <h3>🏷️ Case Legend</h3>
-        <button onClick={onClose} className="close-btn">✕</button>
       </div>
 
       <div className="legend-content">

@@ -18,7 +18,10 @@ export default function Home() {
   const [newCampaignName, setNewCampaignName] = useState('')
   const [newCampaignDescription, setNewCampaignDescription] = useState('')
   const [newCrewName, setNewCrewName] = useState('The Party')
+  const [newCampaignImage, setNewCampaignImage] = useState<File | null>(null)
+  const [newCampaignImagePreview, setNewCampaignImagePreview] = useState<string | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [isUploadingCreate, setIsUploadingCreate] = useState(false)
   
   // Edit modal state
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
@@ -26,6 +29,30 @@ export default function Home() {
   const [editDescription, setEditDescription] = useState('')
   const [editCrewName, setEditCrewName] = useState('')
   const [editImageUrl, setEditImageUrl] = useState('')
+  const [editImage, setEditImage] = useState<File | null>(null)
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null)
+  const [isUploadingEdit, setIsUploadingEdit] = useState(false)
+
+  const handleImageChange = (file: File | null, setImage: (f: File | null) => void, setPreview: (s: string | null) => void) => {
+    if (file) {
+      setImage(file)
+      const reader = new FileReader()
+      reader.onloadend = () => setPreview(reader.result as string)
+      reader.readAsDataURL(file)
+    } else {
+      setImage(null)
+      setPreview(null)
+    }
+  }
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await fetch('/api/upload', { method: 'POST', body: formData })
+    if (!response.ok) throw new Error('Upload failed')
+    const data = await response.json()
+    return data.url
+  }
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,19 +69,32 @@ export default function Home() {
 
     try {
       setCreateError(null)
+      setIsUploadingCreate(true)
+      
+      let imageUrl: string | undefined
+      if (newCampaignImage) {
+        const url = await uploadImage(newCampaignImage)
+        if (url) imageUrl = url
+      }
+      
       const campaign = await createCampaign.mutateAsync({
         name: newCampaignName.trim(),
         description: newCampaignDescription || undefined,
         crewName: newCrewName || 'The Party',
+        imageUrl,
       })
       setShowNewCampaign(false)
       setNewCampaignName('')
       setNewCampaignDescription('')
       setNewCrewName('The Party')
+      setNewCampaignImage(null)
+      setNewCampaignImagePreview(null)
       router.push(`/campaign/${campaign.id}`)
     } catch (error) {
       console.error('Failed to create campaign:', error)
       setCreateError('Failed to create campaign. Please try again.')
+    } finally {
+      setIsUploadingCreate(false)
     }
   }
 
@@ -72,6 +112,8 @@ export default function Home() {
     setEditDescription('')
     setEditCrewName('')
     setEditImageUrl('')
+    setEditImage(null)
+    setEditImagePreview(null)
   }
 
   const handleUpdateCampaign = async (e: React.FormEvent) => {
@@ -79,12 +121,20 @@ export default function Home() {
     if (!editingCampaign || !editName.trim()) return
 
     try {
+      setIsUploadingEdit(true)
+      
+      let imageUrl = editImageUrl || undefined
+      if (editImage) {
+        const url = await uploadImage(editImage)
+        if (url) imageUrl = url
+      }
+      
       // Update campaign
       await updateCampaign.mutateAsync({
         id: editingCampaign.id,
         name: editName.trim(),
         description: editDescription || undefined,
-        imageUrl: editImageUrl || undefined,
+        imageUrl,
       })
       
       // Update crew name if changed
@@ -99,6 +149,8 @@ export default function Home() {
     } catch (error) {
       console.error('Failed to update campaign:', error)
       alert('Failed to update campaign. Please try again.')
+    } finally {
+      setIsUploadingEdit(false)
     }
   }
 
@@ -229,12 +281,42 @@ export default function Home() {
                 <small>A crew will be automatically created for your party</small>
               </div>
 
+              <div className="form-group">
+                <label htmlFor="campaignImage">Campaign Icon</label>
+                <div className="image-upload-area">
+                  {newCampaignImagePreview ? (
+                    <div className="image-preview">
+                      <img src={newCampaignImagePreview} alt="Preview" />
+                      <button
+                        type="button"
+                        onClick={() => handleImageChange(null, setNewCampaignImage, setNewCampaignImagePreview)}
+                        className="remove-image-btn"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="upload-label">
+                      <span>📷 Click to upload image</span>
+                      <input
+                        id="campaignImage"
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleImageChange(e.target.files?.[0] || null, setNewCampaignImage, setNewCampaignImagePreview)}
+                        hidden
+                      />
+                    </label>
+                  )}
+                </div>
+                <small>Optional: Upload an image for the campaign card</small>
+              </div>
+
               <div className="form-actions">
                 <button type="button" onClick={() => setShowNewCampaign(false)} className="btn-secondary">
                   Cancel
                 </button>
-                <button type="submit" disabled={createCampaign.isPending} className="btn-primary">
-                  {createCampaign.isPending ? 'Creating...' : 'Create Campaign'}
+                <button type="submit" disabled={createCampaign.isPending || isUploadingCreate} className="btn-primary">
+                  {isUploadingCreate ? 'Uploading...' : createCampaign.isPending ? 'Creating...' : 'Create Campaign'}
                 </button>
               </div>
             </form>
@@ -283,15 +365,37 @@ export default function Home() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="editImageUrl">Campaign Icon URL</label>
-                <input
-                  id="editImageUrl"
-                  type="url"
-                  value={editImageUrl}
-                  onChange={e => setEditImageUrl(e.target.value)}
-                  placeholder="https://example.com/image.png"
-                />
-                <small>Optional: URL to an image for the campaign card</small>
+                <label htmlFor="editImageUpload">Campaign Icon</label>
+                <div className="image-upload-area">
+                  {(editImagePreview || editImageUrl) ? (
+                    <div className="image-preview">
+                      <img src={editImagePreview || editImageUrl} alt="Preview" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditImage(null)
+                          setEditImagePreview(null)
+                          setEditImageUrl('')
+                        }}
+                        className="remove-image-btn"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="upload-label">
+                      <span>📷 Click to upload image</span>
+                      <input
+                        id="editImageUpload"
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleImageChange(e.target.files?.[0] || null, setEditImage, setEditImagePreview)}
+                        hidden
+                      />
+                    </label>
+                  )}
+                </div>
+                <small>Optional: Upload an image for the campaign card</small>
               </div>
 
               <div className="form-actions edit-actions">
@@ -309,10 +413,10 @@ export default function Home() {
                   </button>
                   <button 
                     type="submit" 
-                    disabled={updateCampaign.isPending || updateCrew.isPending} 
+                    disabled={updateCampaign.isPending || updateCrew.isPending || isUploadingEdit} 
                     className="btn-primary"
                   >
-                    {updateCampaign.isPending || updateCrew.isPending ? 'Saving...' : 'Save Changes'}
+                    {isUploadingEdit ? 'Uploading...' : updateCampaign.isPending || updateCrew.isPending ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </div>

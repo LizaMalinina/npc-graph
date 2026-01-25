@@ -557,7 +557,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
         {/* Mobile legend panel */}
         {isMobile && showMobileLegend && (
           <div className="mobile-legend-panel">
-            <DetectiveLegend onClose={() => setShowMobileLegend(false)} />
+            <DetectiveLegend />
           </div>
         )}
 
@@ -646,23 +646,35 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
 
           {/* Right panel - selected NPC details (desktop: sidebar, mobile: bottom sheet) */}
           {selectedNode && (
-            <div className={`detective-detail-panel ${isMobile ? 'mobile-sheet' : ''}`}>
-              <DetectiveNpcPanel
-                node={selectedNode}
-                relationships={nodeRelationships}
-                onClose={() => {
-                  setSelectedNode(null)
-                  setParentCrewNode(null)
-                }}
-                onEdit={handleEditNpc}
-                onAddConnection={handleAddConnectionFromNode}
-                onMemberClick={handleMemberClick}
-                onBackToCrew={handleBackToCrew}
-                parentCrew={parentCrewNode}
-                canEdit={canEdit}
-                isMobile={isMobile}
-              />
-            </div>
+            <>
+              {/* Mobile backdrop - click to close */}
+              {isMobile && (
+                <div 
+                  className="mobile-sheet-backdrop"
+                  onClick={() => {
+                    setSelectedNode(null)
+                    setParentCrewNode(null)
+                  }}
+                />
+              )}
+              <div className={`detective-detail-panel ${isMobile ? 'mobile-sheet' : ''}`}>
+                <DetectiveNpcPanel
+                  node={selectedNode}
+                  relationships={nodeRelationships}
+                  onClose={() => {
+                    setSelectedNode(null)
+                    setParentCrewNode(null)
+                  }}
+                  onEdit={handleEditNpc}
+                  onAddConnection={handleAddConnectionFromNode}
+                  onMemberClick={handleMemberClick}
+                  onBackToCrew={handleBackToCrew}
+                  parentCrew={parentCrewNode}
+                  canEdit={canEdit}
+                  isMobile={isMobile}
+                />
+              </div>
+            </>
           )}
         </div>
 
@@ -670,7 +682,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
         {showLegend && (
           <div className="legend-overlay" onClick={() => setShowLegend(false)}>
             <div className="legend-popup" onClick={e => e.stopPropagation()}>
-              <DetectiveLegend onClose={() => setShowLegend(false)} />
+              <DetectiveLegend />
             </div>
           </div>
         )}

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { GraphNode, RELATIONSHIP_COLORS } from '@/types'
 
 function getPlaceholderAvatar(name: string): string {
@@ -35,8 +36,12 @@ export default function DetectiveNpcPanel({
   canEdit,
   isMobile = false,
 }: DetectiveNpcPanelProps) {
+  const [showFullDescription, setShowFullDescription] = useState(false)
   const isCrew = node.nodeType === 'crew'
   const isCrewMember = node.nodeType === 'crew-member'
+  
+  const DESCRIPTION_THRESHOLD = 100 // characters before showing "show more"
+  const shouldTruncate = isMobile && node.description && node.description.length > DESCRIPTION_THRESHOLD
 
   // Mobile horizontal layout for NPCs and crew members (not crews)
   if (isMobile && !isCrew) {
@@ -59,7 +64,7 @@ export default function DetectiveNpcPanel({
 
         {/* Mobile horizontal layout */}
         <div className="mobile-content-layout">
-          {/* Left side - Photo */}
+          {/* Left side - Photo and quick info */}
           <div className="mobile-photo-section">
             <div className="suspect-photo-wrapper">
               <img
@@ -74,46 +79,46 @@ export default function DetectiveNpcPanel({
                 <div className="status-stamp unknown">UNKNOWN</div>
               )}
             </div>
-            {/* Quick info under photo */}
-            <div className="mobile-quick-info">
+            {/* Info under photo */}
+            <div className="mobile-under-photo">
               <span className={`status-badge status-${node.status}`}>
                 {node.status?.toUpperCase()}
               </span>
-              <span className={`type-badge ${isCrewMember ? 'crew-member-type' : 'npc-type'}`}>
-                {isCrewMember ? '👤' : '🎭'}
-              </span>
+              {node.faction && (
+                <span className="faction-badge-small">{node.faction}</span>
+              )}
+              {node.location && (
+                <span className="location-badge-small">📍 {node.location}</span>
+              )}
             </div>
           </div>
 
           {/* Right side - Details */}
           <div className="mobile-details-section">
-            <h2 className="suspect-name">
-              {isCrewMember && <span className="type-icon">👤 </span>}
-              {node.name}
-            </h2>
+            <h2 className="suspect-name">{node.name}</h2>
             {node.title && <p className="suspect-title">&ldquo;{node.title}&rdquo;</p>}
             
             {node.description && (
-              <p className="mobile-description">{node.description}</p>
-            )}
-
-            {node.faction && (
-              <div className="mobile-detail-row">
-                <span className="detail-label">Faction:</span>
-                <span className="faction-badge">{node.faction}</span>
-              </div>
-            )}
-
-            {node.location && (
-              <div className="mobile-detail-row">
-                <span className="detail-label">Location:</span>
-                <span>{node.location}</span>
+              <div className="mobile-description-wrapper">
+                <p className={`mobile-description ${!showFullDescription && shouldTruncate ? 'truncated' : ''}`}>
+                  {showFullDescription || !shouldTruncate 
+                    ? node.description 
+                    : node.description.slice(0, DESCRIPTION_THRESHOLD) + '...'}
+                </p>
+                {shouldTruncate && (
+                  <button 
+                    className="show-more-btn"
+                    onClick={() => setShowFullDescription(!showFullDescription)}
+                  >
+                    {showFullDescription ? 'Show less' : 'Show more'}
+                  </button>
+                )}
               </div>
             )}
 
             {node.tags && node.tags.length > 0 && (
               <div className="mobile-tags">
-                {node.tags.map(tag => (
+                {node.tags.filter(t => t !== 'crew-member').map(tag => (
                   <span key={tag} className="evidence-tag">#{tag}</span>
                 ))}
               </div>
@@ -219,11 +224,7 @@ export default function DetectiveNpcPanel({
 
       {/* Name and title */}
       <div className="suspect-info">
-        <h2 className="suspect-name">
-          {isCrew && <span className="type-icon">👥 </span>}
-          {isCrewMember && <span className="type-icon">👤 </span>}
-          {node.name}
-        </h2>
+        <h2 className="suspect-name">{node.name}</h2>
         {node.title && <p className="suspect-title">&ldquo;{node.title}&rdquo;</p>}
       </div>
 

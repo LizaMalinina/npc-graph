@@ -37,7 +37,7 @@ export function useCreateCampaign() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async (data: { name: string; description?: string; crewName?: string }) => {
+    mutationFn: async (data: { name: string; description?: string; crewName?: string; imageUrl?: string }) => {
       const res = await fetch(`${API_BASE}/campaigns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
