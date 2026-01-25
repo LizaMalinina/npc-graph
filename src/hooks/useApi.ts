@@ -352,6 +352,48 @@ export function useAddCrewMember() {
   })
 }
 
+// Update Crew Member
+export function useUpdateCrewMember() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { name?: string; title?: string; imageUrl?: string; description?: string } }) => {
+      const res = await fetch(`${API_BASE}/crew-members/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error('Failed to update crew member')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crews'], refetchType: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['campaigns'], refetchType: 'active' })
+    },
+  })
+}
+
+// Delete Crew Member
+export function useDeleteCrewMember() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`${API_BASE}/crew-members/${id}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('Failed to delete crew member')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crews'], refetchType: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['campaigns'], refetchType: 'active' })
+    },
+  })
+}
+
 // Create Crew Relationship (crew to NPC)
 export function useCreateCrewRelationship() {
   const queryClient = useQueryClient()

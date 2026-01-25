@@ -151,7 +151,7 @@ export default function Home() {
               <h2>{campaign.name}</h2>
               {campaign.description && <p>{campaign.description}</p>}
               <div className="campaign-meta">
-                <span>👥 {campaign.crew?.name || 'No crew'}</span>
+                <span>👥 {campaign.crew?.name || 'No crew'} ({campaign.crew?._count?.members || 0})</span>
                 <span>🎭 {campaign._count?.npcs || 0} NPCs</span>
               </div>
             </button>

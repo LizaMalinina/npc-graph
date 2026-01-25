@@ -19,6 +19,8 @@ import {
   useUpdateRelationship,
   useDeleteRelationship,
   useAddCrewMember,
+  useUpdateCrewMember,
+  useDeleteCrewMember,
   useCreateCrewRelationship,
   useCreateCrewMemberRelationship,
 } from '@/hooks/useApi'
@@ -70,6 +72,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const [showRelationshipForm, setShowRelationshipForm] = useState(false)
   const [parentCrewNode, setParentCrewNode] = useState<GraphNode | null>(null)
   const [editingNpc, setEditingNpc] = useState<Npc | null>(null)
+  const [editingCrewMemberId, setEditingCrewMemberId] = useState<string | null>(null)
   const [editingRelationship, setEditingRelationship] = useState<GraphLink | null>(null)
   const [showLegend, setShowLegend] = useState(false)
 
@@ -82,6 +85,8 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const createRelationship = useCreateRelationship()
   const updateRelationship = useUpdateRelationship()
   const addCrewMember = useAddCrewMember()
+  const updateCrewMember = useUpdateCrewMember()
+  const deleteCrewMember = useDeleteCrewMember()
   const deleteRelationship = useDeleteRelationship()
   const createCrewRelationship = useCreateCrewRelationship()
   const createCrewMemberRelationship = useCreateCrewMemberRelationship()
@@ -171,11 +176,24 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
 
   const handleEditNpc = () => {
     if (selectedNode && selectedNode.nodeType !== 'crew') {
+      // Check if this is a crew member (ID starts with "member-")
+      const isCrewMember = selectedNode.nodeType === 'crew-member' || selectedNode.id.startsWith('member-')
+      
+      if (isCrewMember) {
+        // Extract the actual crew member ID (remove "member-" prefix if present)
+        const actualId = selectedNode.id.startsWith('member-') 
+          ? selectedNode.id.replace('member-', '') 
+          : selectedNode.id
+        setEditingCrewMemberId(actualId)
+      } else {
+        setEditingCrewMemberId(null)
+      }
+      
       setEditingNpc({
         id: selectedNode.id,
         name: selectedNode.name,
         title: selectedNode.title,
-        description: null,
+        description: selectedNode.description || null,
         imageUrl: selectedNode.imageUrl,
         faction: selectedNode.faction,
         location: selectedNode.location,
@@ -198,18 +216,38 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
 
   const handleUpdateNpc = async (npcData: Partial<Npc>) => {
     if (editingNpc) {
-      await updateNpc.mutateAsync({ id: editingNpc.id, data: npcData })
+      // Check if we're editing a crew member
+      if (editingCrewMemberId) {
+        await updateCrewMember.mutateAsync({ 
+          id: editingCrewMemberId, 
+          data: {
+            name: npcData.name,
+            title: npcData.title || undefined,
+            description: npcData.description || undefined,
+            imageUrl: npcData.imageUrl || undefined,
+          }
+        })
+      } else {
+        await updateNpc.mutateAsync({ id: editingNpc.id, data: npcData })
+      }
       setShowNpcForm(false)
       setEditingNpc(null)
+      setEditingCrewMemberId(null)
       setSelectedNode(null)
     }
   }
 
   const handleDeleteNpc = async () => {
     if (editingNpc) {
-      await deleteNpc.mutateAsync(editingNpc.id)
+      // Check if we're deleting a crew member
+      if (editingCrewMemberId) {
+        await deleteCrewMember.mutateAsync(editingCrewMemberId)
+      } else {
+        await deleteNpc.mutateAsync(editingNpc.id)
+      }
       setShowNpcForm(false)
       setEditingNpc(null)
+      setEditingCrewMemberId(null)
       setSelectedNode(null)
     }
   }
@@ -583,6 +621,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
           onCancel={() => {
             setShowNpcForm(false)
             setEditingNpc(null)
+            setEditingCrewMemberId(null)
           }}
           onDelete={editingNpc ? handleDeleteNpc : undefined}
           crews={crews}

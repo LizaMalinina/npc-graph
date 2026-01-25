@@ -53,6 +53,9 @@ export interface Crew {
   createdAt: Date
   updatedAt: Date
   members?: CrewMember[]
+  _count?: {
+    members: number
+  }
 }
 
 export interface CrewMember {

@@ -222,17 +222,19 @@ export default function NpcForm({ npc, onSubmit, onSubmitCrewMember, onCancel, o
                 <p className="text-red-400 text-sm">{uploadError}</p>
               )}
               
-              {/* URL Input */}
-              <div className="relative">
-                <input
-                  type="url"
-                  name="imageUrl"
-                  value={formData.imageUrl}
-                  onChange={handleChange}
-                  placeholder="Or paste image URL..."
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+              {/* URL Input - only show if no uploaded image (URLs from Azure have SAS tokens) */}
+              {!formData.imageUrl?.includes('blob.core.windows.net') && (
+                <div className="relative">
+                  <input
+                    type="url"
+                    name="imageUrl"
+                    value={formData.imageUrl}
+                    onChange={handleChange}
+                    placeholder="Or paste image URL..."
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
               
               {/* Image Preview */}
               {formData.imageUrl && (
