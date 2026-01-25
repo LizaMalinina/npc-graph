@@ -327,9 +327,10 @@ export default function NpcForm({ npc, onSubmit, onSubmitCrewMember, onCancel, o
           <div className="flex gap-2 pt-4">
             <button
               type="submit"
-              className={`flex-1 px-4 py-2 ${isCrewMember ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md transition-colors`}
+              disabled={isUploading}
+              className={`flex-1 px-4 py-2 ${isCrewMember ? 'bg-purple-600 hover:bg-purple-700' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-md transition-colors disabled:opacity-50`}
             >
-              {npc ? 'Update' : 'Create'}
+              {isUploading ? 'Uploading...' : (npc ? 'Update' : 'Create')}
             </button>
             <button
               type="button"

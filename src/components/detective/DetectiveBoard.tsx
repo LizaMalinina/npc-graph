@@ -672,7 +672,29 @@ export default function DetectiveBoard({
             onMouseLeave={() => setHoveredNode(null)}
             onTouchStart={(e) => {
               e.stopPropagation()
-              handleTouchStart(e, node.id)
+              didDrag.current = false
+              touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+              touchNodeId.current = node.id
+            }}
+            onTouchMove={(e) => {
+              // Check if we moved enough to count as drag
+              if (touchStartPos.current) {
+                const dx = Math.abs(e.touches[0].clientX - touchStartPos.current.x)
+                const dy = Math.abs(e.touches[0].clientY - touchStartPos.current.y)
+                if (dx > TOUCH_TAP_THRESHOLD || dy > TOUCH_TAP_THRESHOLD) {
+                  didDrag.current = true
+                }
+              }
+            }}
+            onTouchEnd={(e) => {
+              // Handle tap on node directly
+              e.stopPropagation()
+              if (!didDrag.current) {
+                setSelectedNodeId(node.id)
+                onNodeClick(node)
+              }
+              touchStartPos.current = null
+              touchNodeId.current = null
             }}
           >
             {/* Push pin */}
@@ -710,9 +732,9 @@ export default function DetectiveBoard({
               )}
             </div>
 
-            {/* Name label (sticky note style) - always show on mobile, show on hover/select for desktop */}
-            {(isMobile || isHovered || isSelected) && (
-              <div className={`name-label ${isMobile && !isSelected && !isHovered ? 'mobile-always-visible' : ''}`}>
+            {/* Name label (sticky note style) - only show when selected on mobile, show on hover/select for desktop */}
+            {((isMobile && isSelected) || (!isMobile && (isHovered || isSelected))) && (
+              <div className="name-label">
                 {isCrew && <span className="crew-label-prefix">👥 </span>}
                 {isCrewMember && <span className="crew-label-prefix">👤 </span>}
                 {node.name}
