@@ -660,12 +660,13 @@ export default function DetectiveBoard({
               cursor: draggingNode === node.id ? 'grabbing' : 'pointer',
             }}
             onClick={(e) => {
-              // For mouse clicks only - touch is handled separately
-              if (!('ontouchstart' in window)) {
-                e.stopPropagation()
+              // Handle click/tap - works for both mouse and touch
+              e.stopPropagation()
+              if (!didDrag.current) {
                 setSelectedNodeId(node.id)
                 onNodeClick(node)
               }
+              didDrag.current = false
             }}
             onMouseDown={(e) => handleMouseDown(e, node.id)}
             onMouseEnter={() => setHoveredNode(node.id)}
@@ -675,7 +676,7 @@ export default function DetectiveBoard({
               didDrag.current = false
               touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
               touchNodeId.current = node.id
-              // Also set up for potential drag
+              // Set up for potential drag
               const pos = positions.get(node.id)
               if (pos) {
                 const rect = containerRef.current?.getBoundingClientRect()
@@ -696,8 +697,7 @@ export default function DetectiveBoard({
                 const dy = Math.abs(touch.clientY - touchStartPos.current.y)
                 if (dx > TOUCH_TAP_THRESHOLD || dy > TOUCH_TAP_THRESHOLD) {
                   didDrag.current = true
-                  // Actually move the node
-                  e.preventDefault()
+                  // Move the node - don't call preventDefault, let CSS touch-action handle it
                   const rect = containerRef.current?.getBoundingClientRect()
                   if (rect && draggingNode) {
                     const newX = (touch.clientX - rect.left - pan.x) / zoom - dragOffset.x
@@ -713,16 +713,10 @@ export default function DetectiveBoard({
             }}
             onTouchEnd={(e) => {
               e.stopPropagation()
-              // If we didn't drag, this was a tap - select the node
-              if (!didDrag.current && touchNodeId.current === node.id) {
-                setSelectedNodeId(node.id)
-                onNodeClick(node)
-              }
-              // Reset state
+              // Reset state - onClick will handle selection if it was a tap
               setDraggingNode(null)
               touchStartPos.current = null
               touchNodeId.current = null
-              didDrag.current = false
             }}
           >
             {/* Push pin */}
