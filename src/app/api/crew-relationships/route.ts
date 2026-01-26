@@ -24,6 +24,21 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { crewId, toNpcId, type, description, strength } = body
 
+    // Check if a relationship already exists between this crew and NPC
+    const existing = await prisma.crewRelationship.findFirst({
+      where: {
+        crewId,
+        toNpcId,
+      },
+    })
+    
+    if (existing) {
+      return NextResponse.json(
+        { error: 'A connection already exists between this crew and character' },
+        { status: 400 }
+      )
+    }
+
     const relationship = await prisma.crewRelationship.create({
       data: {
         crewId,

@@ -160,6 +160,38 @@ az containerapp update --name npc-graph --resource-group npc-graph-rg --set-env-
   AZURE_STORAGE_CONTAINER_NAME='npc-images'
 ```
 
+## CI/CD Pipelines
+
+The project uses GitHub Actions for continuous deployment:
+
+### Automatic Deployment to Dev/Staging
+
+Pushing to `main` branch automatically triggers the build and deploy workflow:
+- Builds Docker image with commit SHA as tag
+- Pushes to Azure Container Registry (`npcgraphcr.azurecr.io`)
+- Deploys to `npc-graph` container app (dev/staging environment)
+
+### Manual Promotion to Production
+
+To deploy a tested image to production:
+
+1. **Get the commit SHA** of the version you want to deploy:
+   ```bash
+   # Get the latest commit SHA from main branch
+   git rev-parse origin/main
+   ```
+   This returns the full 40-character SHA like `0959421a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e`
+
+2. **Trigger the promote-to-prod workflow**:
+   - Go to GitHub → Actions → "Promote to Production"
+   - Click "Run workflow"
+   - Paste the full commit SHA as the image tag
+   - Click "Run workflow"
+
+3. The workflow will deploy the existing image to `npc-graph-prod` container app
+
+> **Note:** Only deploy commit SHAs that have successfully passed the dev deployment. The image must already exist in the container registry.
+
 ## User Flow
 
 ```mermaid

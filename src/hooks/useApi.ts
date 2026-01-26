@@ -196,7 +196,10 @@ export function useCreateRelationship() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
-      if (!res.ok) throw new Error('Failed to create relationship')
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to create relationship')
+      }
       return res.json()
     },
     onSuccess: () => {
@@ -341,7 +344,10 @@ export function useCreateCrewRelationship() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
-      if (!res.ok) throw new Error('Failed to create crew relationship')
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to create crew relationship')
+      }
       return res.json()
     },
     onSuccess: () => {
@@ -399,7 +405,10 @@ export function useCreateCrewMemberRelationship() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
-      if (!res.ok) throw new Error('Failed to create crew member relationship')
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to create crew member relationship')
+      }
       return res.json()
     },
     onSuccess: () => {

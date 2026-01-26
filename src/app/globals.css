@@ -206,6 +206,12 @@ body {
   justify-content: center;
   z-index: 100;
   padding: 1rem;
+  overflow: hidden;
+}
+
+/* Prevent body scroll when modal is open */
+body:has(.modal-overlay) {
+  overflow: hidden;
 }
 
 .modal-content {
@@ -336,6 +342,27 @@ body {
 .form-actions-right {
   display: flex;
   gap: 1rem;
+}
+
+/* Campaign edit form actions - cancel left, save right, delete below */
+.form-actions.campaign-edit-actions {
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-actions-row {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.form-actions-row .btn-secondary,
+.form-actions-row .btn-primary {
+  flex: 1;
+}
+
+.btn-full-width {
+  width: 100%;
 }
 
 /* Image upload area */

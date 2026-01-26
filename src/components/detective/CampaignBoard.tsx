@@ -375,11 +375,12 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
         } else {
           console.error('Unsupported relationship type combination')
         }
+        setShowRelationshipForm(false)
       } catch (error) {
-        console.error('Failed to create relationship:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Failed to create relationship'
+        alert(errorMessage)
       }
     }
-    setShowRelationshipForm(false)
   }
 
   const handleUpdateRelationship = async (relData: {

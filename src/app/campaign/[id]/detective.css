@@ -774,6 +774,16 @@
   opacity: 1;
 }
 
+/* Always show edit/delete buttons on mobile */
+@media (max-width: 768px) {
+  .edit-connection-btn,
+  .delete-connection-btn {
+    opacity: 1;
+    width: 28px;
+    height: 28px;
+  }
+}
+
 .delete-connection-btn:hover {
   background: rgba(239, 68, 68, 0.6);
   color: white;
@@ -1327,7 +1337,7 @@
 
   .detective-page.is-mobile .toolbar-title {
     font-size: 1rem;
-    max-width: 150px;
+    max-width: 50vw;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1421,7 +1431,7 @@
   }
 
   .detective-page.is-mobile .toolbar-title {
-    max-width: 100px;
+    max-width: 40vw;
     font-size: 0.9rem;
   }
 

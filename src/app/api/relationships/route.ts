@@ -22,18 +22,19 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // Check if relationship already exists
+    // Check if ANY relationship already exists between these two NPCs (in either direction)
     const existing = await prisma.relationship.findFirst({
       where: {
-        fromNpcId: body.fromNpcId,
-        toNpcId: body.toNpcId,
-        type: body.type,
+        OR: [
+          { fromNpcId: body.fromNpcId, toNpcId: body.toNpcId },
+          { fromNpcId: body.toNpcId, toNpcId: body.fromNpcId },
+        ],
       },
     })
     
     if (existing) {
       return NextResponse.json(
-        { error: 'Relationship already exists' },
+        { error: 'A connection already exists between these characters' },
         { status: 400 }
       )
     }

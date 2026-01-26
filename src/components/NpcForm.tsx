@@ -88,8 +88,8 @@ export default function NpcForm({ npc, onSubmit, onSubmitCrewMember, onCancel, o
   const isCrewMember = characterType === 'crew-member'
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[200]" onClick={onCancel}>
-      <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[200]" onClick={onCancel} onTouchEnd={(e) => { if (e.target === e.currentTarget) onCancel() }}>
+      <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()}>
         <h2 className="text-xl font-bold text-white mb-4">
           {npc ? 'Edit Character' : 'Create New Character'}
         </h2>
@@ -299,6 +299,7 @@ export default function NpcForm({ npc, onSubmit, onSubmitCrewMember, onCancel, o
                   value={formData.status}
                   onChange={handleChange}
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ touchAction: 'manipulation' }}
                 >
                   {NPC_STATUSES.map(status => (
                     <option key={status} value={status}>

@@ -407,16 +407,8 @@ export default function Home() {
                 <small>Optional: Upload an image for the campaign card</small>
               </div>
 
-              <div className="form-actions edit-actions">
-                <button 
-                  type="button" 
-                  onClick={handleDeleteCampaign} 
-                  className="btn-danger"
-                  disabled={deleteCampaign.isPending}
-                >
-                  {deleteCampaign.isPending ? 'Deleting...' : '🗑️ Delete'}
-                </button>
-                <div className="form-actions-right">
+              <div className="form-actions campaign-edit-actions">
+                <div className="form-actions-row">
                   <button type="button" onClick={closeEditModal} className="btn-secondary">
                     Cancel
                   </button>
@@ -425,9 +417,17 @@ export default function Home() {
                     disabled={updateCampaign.isPending || updateCrew.isPending || isUploadingEdit} 
                     className="btn-primary"
                   >
-                    {isUploadingEdit ? 'Uploading...' : updateCampaign.isPending || updateCrew.isPending ? 'Saving...' : 'Save Changes'}
+                    {isUploadingEdit ? 'Uploading...' : updateCampaign.isPending || updateCrew.isPending ? 'Saving...' : 'Save'}
                   </button>
                 </div>
+                <button 
+                  type="button" 
+                  onClick={handleDeleteCampaign} 
+                  className="btn-danger btn-full-width"
+                  disabled={deleteCampaign.isPending}
+                >
+                  {deleteCampaign.isPending ? 'Deleting...' : '🗑️ Delete Campaign'}
+                </button>
               </div>
             </form>
           </div>
