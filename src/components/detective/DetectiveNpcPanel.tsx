@@ -2,11 +2,7 @@
 
 import { useState } from 'react'
 import { GraphNode, RELATIONSHIP_COLORS } from '@/types'
-
-function getPlaceholderAvatar(name: string): string {
-  const seed = encodeURIComponent(name)
-  return `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=b8860b`
-}
+import { getPlaceholderAvatar } from '@/lib/utils'
 
 interface DetectiveNpcPanelProps {
   node: GraphNode
@@ -75,7 +71,7 @@ export default function DetectiveNpcPanel({
           <div className="mobile-photo-section">
             <div className="suspect-photo-wrapper">
               <img
-                src={node.imageUrl || getPlaceholderAvatar(node.name)}
+                src={node.imageUrl || getPlaceholderAvatar(node.name, 'b8860b')}
                 alt={node.name}
                 className="suspect-photo"
               />
@@ -230,7 +226,7 @@ export default function DetectiveNpcPanel({
       {/* Photo */}
       <div className="suspect-photo-wrapper">
         <img
-          src={node.imageUrl || getPlaceholderAvatar(node.name)}
+          src={node.imageUrl || getPlaceholderAvatar(node.name, 'b8860b')}
           alt={node.name}
           className="suspect-photo"
         />
@@ -274,7 +270,7 @@ export default function DetectiveNpcPanel({
                 onClick={() => onMemberClick?.(member)}
               >
                 <img
-                  src={member.imageUrl || getPlaceholderAvatar(member.name)}
+                  src={member.imageUrl || getPlaceholderAvatar(member.name, 'b8860b')}
                   alt={member.name}
                   className="member-photo"
                 />

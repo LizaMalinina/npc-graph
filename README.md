@@ -220,7 +220,9 @@ npc-graph/
 │   │   │   ├── npcs/           # NPC CRUD
 │   │   │   ├── relationships/  # Relationship CRUD
 │   │   │   ├── crews/          # Crew management
-│   │   │   └── graph/          # Graph data endpoint
+│   │   │   ├── crew-relationships/     # Crew to NPC relationships
+│   │   │   ├── crew-member-relationships/  # Crew member to NPC relationships
+│   │   │   └── upload/         # Image upload endpoint
 │   │   ├── campaign/[id]/      # Campaign board page
 │   │   ├── layout.tsx
 │   │   └── page.tsx            # Campaign selection
@@ -235,13 +237,16 @@ npc-graph/
 │   │   ├── RelationshipForm.tsx
 │   │   └── Providers.tsx
 │   ├── hooks/
-│   │   └── useApi.ts           # React Query hooks
+│   │   ├── useApi.ts           # React Query hooks
+│   │   └── useMobileDetection.ts  # Mobile viewport detection
 │   ├── lib/
-│   │   └── prisma.ts
+│   │   ├── prisma.ts           # Prisma client
+│   │   └── utils.ts            # Shared utility functions
 │   └── types/
 │       └── index.ts
 ├── prisma/
-│   ├── schema.prisma           # Database schema
+│   ├── schema.prisma           # SQLite schema (dev)
+│   ├── schema.postgres.prisma  # PostgreSQL schema (prod)
 │   └── seed.ts
 ├── Dockerfile              # Development Docker
 ├── Dockerfile.prod         # Production Docker (multi-stage)
@@ -353,15 +358,21 @@ npm run dev
 
 - [ ] Full authentication with NextAuth.js
 - [ ] Export/Import data (JSON/CSV)
-- [x] Image upload for NPC portraits
 - [ ] Collaborative real-time editing
 - [ ] Timeline view for relationship changes
-- [ ] Mobile-responsive design and touch support
-- [ ] Zoom in/out controls for board navigation
-- [x] Campaign management system
-- [x] Detective board visualization
+
+## Completed Features
+
+- [x] Image upload for NPC portraits (Azure Blob Storage)
+- [x] Campaign management system with slug-based URLs
+- [x] Detective board visualization with yarn connections
 - [x] Crew management with members
-- [x] Crew member navigation
+- [x] Crew member navigation and relationships
+- [x] Mobile-responsive design and touch support
+- [x] Drag and drop nodes on mobile and desktop
+- [x] Pinch-to-zoom and pan on board
+- [x] Single connection enforcement between characters
+- [x] CI/CD with GitHub Actions to Azure Container Apps
 
 ## License
 

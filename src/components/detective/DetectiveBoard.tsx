@@ -2,18 +2,13 @@
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react'
 import { GraphData, GraphNode, FilterState, RELATIONSHIP_COLORS } from '@/types'
+import { getPlaceholderAvatar } from '@/lib/utils'
 
 interface DetectiveBoardProps {
   data: GraphData
   filters: FilterState
   onNodeClick: (node: GraphNode) => void
   selectedNodeId?: string | null
-}
-
-// Generate a placeholder avatar URL based on name
-function getPlaceholderAvatar(name: string): string {
-  const seed = encodeURIComponent(name)
-  return `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=3A5F4B`
 }
 
 // Get polaroid-style rotation for each node
@@ -33,7 +28,7 @@ function getPinColor(status: string): string {
     case 'dead':
       return '#dc2626' // red
     case 'unknown':
-      return '#94a3b8' // slate
+      return '#6366f1' // indigo/purple
     default:
       return '#fbbf24' // yellow
   }

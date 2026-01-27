@@ -5,6 +5,7 @@ import { GraphNode, GraphLink, RELATIONSHIP_TYPES } from '@/types'
 
 interface RelationshipFormProps {
   nodes: GraphNode[]
+  existingLinks?: GraphLink[]
   relationship?: GraphLink | null
   preselectedFromId?: string
   onSubmit: (data: {
@@ -20,6 +21,7 @@ interface RelationshipFormProps {
 
 export default function RelationshipForm({
   nodes,
+  existingLinks = [],
   relationship,
   preselectedFromId,
   onSubmit,
@@ -32,6 +34,26 @@ export default function RelationshipForm({
     type: relationship?.type || 'friend',
     description: relationship?.description || '',
     strength: relationship?.strength || 5,
+  })
+
+  // Get nodes that already have a connection with the selected "from" node
+  const getConnectedNodeIds = (nodeId: string): Set<string> => {
+    const connected = new Set<string>()
+    existingLinks.forEach(link => {
+      const sourceId = typeof link.source === 'object' ? (link.source as { id: string }).id : link.source
+      const targetId = typeof link.target === 'object' ? (link.target as { id: string }).id : link.target
+      if (sourceId === nodeId) connected.add(targetId)
+      if (targetId === nodeId) connected.add(sourceId)
+    })
+    return connected
+  }
+
+  // Get available nodes for "To NPC" dropdown (exclude self and already connected)
+  const availableToNodes = nodes.filter(n => {
+    if (n.id === formData.fromNpcId) return false
+    if (!formData.fromNpcId) return true
+    const connectedIds = getConnectedNodeIds(formData.fromNpcId)
+    return !connectedIds.has(n.id)
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -95,14 +117,15 @@ export default function RelationshipForm({
               className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             >
               <option value="">Select an NPC</option>
-              {nodes
-                .filter(n => n.id !== formData.fromNpcId)
-                .map(node => (
+              {availableToNodes.map(node => (
                   <option key={node.id} value={node.id}>
                     {node.name} {node.title ? `(${node.title})` : ''}
                   </option>
                 ))}
             </select>
+            {formData.fromNpcId && availableToNodes.length === 0 && (
+              <p className="text-xs text-yellow-400 mt-1">All characters already have connections with this one.</p>
+            )}
           </div>
 
           <div>

@@ -28,6 +28,8 @@ import {
   useUpdateCrewRelationship,
   useUpdateCrewMemberRelationship,
 } from '@/hooks/useApi'
+import { useMobileDetection } from '@/hooks/useMobileDetection'
+import { parseRelationshipId } from '@/lib/utils'
 
 interface CampaignBoardProps {
   campaignId: string
@@ -38,22 +40,12 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const canEdit = userRole === 'editor' || userRole === 'admin'
 
   // Mobile detection and responsive states
-  const [isMobile, setIsMobile] = useState(false)
+  const isMobile = useMobileDetection()
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [showMobileLegend, setShowMobileLegend] = useState(false)
   const [showMobileRoles, setShowMobileRoles] = useState(false)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
-
-  // Detect mobile on mount and resize
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
 
   // Close mobile panels when selecting a node
   useEffect(() => {
@@ -399,16 +391,13 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       }
       
       try {
-        // Parse the relationship ID to determine the type
-        if (relationshipId.startsWith('crew-rel-')) {
-          const actualId = relationshipId.replace('crew-rel-', '')
+        const { type, actualId } = parseRelationshipId(relationshipId)
+        if (type === 'crew') {
           await updateCrewRelationship.mutateAsync({ id: actualId, data: updateData })
-        } else if (relationshipId.startsWith('member-rel-')) {
-          const actualId = relationshipId.replace('member-rel-', '')
+        } else if (type === 'member') {
           await updateCrewMemberRelationship.mutateAsync({ id: actualId, data: updateData })
         } else {
-          // Regular NPC relationship
-          await updateRelationship.mutateAsync({ id: relationshipId, data: updateData })
+          await updateRelationship.mutateAsync({ id: actualId, data: updateData })
         }
         setShowRelationshipForm(false)
         setEditingRelationship(null)
@@ -423,16 +412,13 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       const relationshipId = editingRelationship.id
       
       try {
-        // Parse the relationship ID to determine the type
-        if (relationshipId.startsWith('crew-rel-')) {
-          const actualId = relationshipId.replace('crew-rel-', '')
+        const { type, actualId } = parseRelationshipId(relationshipId)
+        if (type === 'crew') {
           await deleteCrewRelationship.mutateAsync(actualId)
-        } else if (relationshipId.startsWith('member-rel-')) {
-          const actualId = relationshipId.replace('member-rel-', '')
+        } else if (type === 'member') {
           await deleteCrewMemberRelationship.mutateAsync(actualId)
         } else {
-          // Regular NPC relationship
-          await deleteRelationship.mutateAsync(relationshipId)
+          await deleteRelationship.mutateAsync(actualId)
         }
         setShowRelationshipForm(false)
         setEditingRelationship(null)
@@ -447,18 +433,13 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       return
     }
     try {
-      // Parse the relationship ID to determine the type
-      if (relationshipId.startsWith('crew-rel-')) {
-        // Crew relationship
-        const actualId = relationshipId.replace('crew-rel-', '')
+      const { type, actualId } = parseRelationshipId(relationshipId)
+      if (type === 'crew') {
         await deleteCrewRelationship.mutateAsync(actualId)
-      } else if (relationshipId.startsWith('member-rel-')) {
-        // Crew member relationship
-        const actualId = relationshipId.replace('member-rel-', '')
+      } else if (type === 'member') {
         await deleteCrewMemberRelationship.mutateAsync(actualId)
       } else {
-        // Regular NPC relationship
-        await deleteRelationship.mutateAsync(relationshipId)
+        await deleteRelationship.mutateAsync(actualId)
       }
     } catch (error) {
       console.error('Failed to delete relationship:', error)
@@ -841,6 +822,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       {showRelationshipForm && (
         <RelationshipForm
           nodes={allNodesForForm}
+          existingLinks={editingRelationship ? [] : (graphData?.links || [])}
           relationship={editingRelationship}
           preselectedFromId={preselectedFromId || undefined}
           onSubmit={editingRelationship ? handleUpdateRelationship : handleCreateRelationship}

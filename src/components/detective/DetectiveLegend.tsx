@@ -19,7 +19,7 @@ export default function DetectiveLegend() {
               <span>Deceased</span>
             </div>
             <div className="legend-item">
-              <div className="pin-sample" style={{ backgroundColor: '#94a3b8' }} />
+              <div className="pin-sample" style={{ backgroundColor: '#6366f1' }} />
               <span>Unknown</span>
             </div>
           </div>
