@@ -245,7 +245,9 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   }
 
   const handleCreateNpc = async (npcData: Partial<Npc>) => {
-    await createNpc.mutateAsync({ ...npcData, campaignId })
+    // Use the actual campaign ID from loaded data (graphData.campaign.id), not the URL slug
+    const actualCampaignId = graphData?.campaign?.id || campaignId
+    await createNpc.mutateAsync({ ...npcData, campaignId: actualCampaignId })
     setShowNpcForm(false)
   }
 
