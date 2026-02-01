@@ -5,30 +5,48 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
-  // Create a default campaign with a crew
+  // Create a campaign
   const campaign = await prisma.campaign.create({
     data: {
       name: 'The Realm of Eldoria',
       slug: 'the-realm-of-eldoria',
       description: 'A fantasy world of magic, intrigue, and adventure',
       isActive: true,
-      crew: {
-        create: {
-          name: 'The Heroes of Eldoria',
-          description: 'The adventuring party exploring the realm',
-        }
-      }
     },
-    include: {
-      crew: true
-    }
   })
 
   console.log(`Created campaign: ${campaign.name}`)
 
-  // Create sample NPCs linked to the campaign
-  const npcs = await Promise.all([
-    prisma.npc.create({
+  // Create organisations
+  const heroesOrg = await prisma.organisation.create({
+    data: {
+      name: 'The Heroes of Eldoria',
+      description: 'The adventuring party exploring the realm',
+      campaignId: campaign.id,
+    },
+  })
+
+  const magesGuild = await prisma.organisation.create({
+    data: {
+      name: 'Mages Guild',
+      description: 'An ancient order of powerful wizards',
+      campaignId: campaign.id,
+    },
+  })
+
+  const shadowNetwork = await prisma.organisation.create({
+    data: {
+      name: 'Shadow Network',
+      description: 'A secretive organization of spies and assassins',
+      campaignId: campaign.id,
+    },
+  })
+
+  console.log('Created organisations')
+
+  // Create characters
+  const characters = await Promise.all([
+    prisma.character.create({
       data: {
         name: 'Eldric Stormwind',
         title: 'The Archmage',
@@ -38,9 +56,10 @@ async function main() {
         status: 'alive',
         tags: 'magic,leader,quest-giver',
         campaignId: campaign.id,
+        organisations: { connect: { id: magesGuild.id } },
       },
     }),
-    prisma.npc.create({
+    prisma.character.create({
       data: {
         name: 'Kira Shadowblade',
         title: 'Assassin',
@@ -50,9 +69,10 @@ async function main() {
         status: 'alive',
         tags: 'stealth,dangerous,informant',
         campaignId: campaign.id,
+        organisations: { connect: { id: shadowNetwork.id } },
       },
     }),
-    prisma.npc.create({
+    prisma.character.create({
       data: {
         name: 'Tormund Ironforge',
         title: 'The Blacksmith',
@@ -64,7 +84,7 @@ async function main() {
         campaignId: campaign.id,
       },
     }),
-    prisma.npc.create({
+    prisma.character.create({
       data: {
         name: 'Lady Seraphina',
         title: 'Noble of House Valdris',
@@ -76,7 +96,7 @@ async function main() {
         campaignId: campaign.id,
       },
     }),
-    prisma.npc.create({
+    prisma.character.create({
       data: {
         name: 'Grimjaw',
         title: 'The Orc Warlord',
@@ -88,7 +108,7 @@ async function main() {
         campaignId: campaign.id,
       },
     }),
-    prisma.npc.create({
+    prisma.character.create({
       data: {
         name: 'Brother Marcus',
         title: 'High Priest',
@@ -100,383 +120,112 @@ async function main() {
         campaignId: campaign.id,
       },
     }),
-    prisma.npc.create({
+    prisma.character.create({
       data: {
-        name: 'Whisper',
-        title: 'The Information Broker',
-        description: 'Knows everything about everyone',
-        faction: 'Shadow Network',
-        location: 'The Undercity',
+        name: 'Aria Goldleaf',
+        title: 'Elven Ranger',
+        description: 'A skilled tracker and protector of the forest',
+        faction: 'Woodland Guardians',
+        location: 'Whispering Woods',
         status: 'alive',
-        tags: 'informant,mysterious,neutral',
+        tags: 'nature,archer,scout',
         campaignId: campaign.id,
+        organisations: { connect: { id: heroesOrg.id } },
       },
     }),
-    prisma.npc.create({
+    prisma.character.create({
       data: {
-        name: 'Captain Helena',
-        title: 'City Guard Commander',
-        description: 'Strict but fair leader of the city guard',
-        faction: 'City Guard',
-        location: 'Guard Barracks',
+        name: 'Thane Rockbreaker',
+        title: 'Dwarven Warrior',
+        description: 'A mighty warrior from the mountain kingdoms',
+        faction: 'Mountain Clans',
+        location: 'Stonehall Keep',
         status: 'alive',
-        tags: 'military,lawful,quest-giver',
+        tags: 'warrior,loyal,brave',
         campaignId: campaign.id,
-      },
-    }),
-    // Additional NPCs for faction comparison
-    prisma.npc.create({
-      data: {
-        name: 'Lyra Moonwhisper',
-        title: 'Enchantress',
-        description: 'A young but talented enchanter at the Mages Guild',
-        faction: 'Mages Guild',
-        location: 'Tower of Stars',
-        status: 'alive',
-        tags: 'magic,enchanting,curious',
-        campaignId: campaign.id,
-      },
-    }),
-    prisma.npc.create({
-      data: {
-        name: 'Sergeant Aldric',
-        title: 'Guard Lieutenant',
-        description: 'Helena\'s trusted second-in-command',
-        faction: 'City Guard',
-        location: 'Guard Barracks',
-        status: 'alive',
-        tags: 'military,loyal,patrol',
-        campaignId: campaign.id,
-      },
-    }),
-    prisma.npc.create({
-      data: {
-        name: 'Theron Valdris',
-        title: 'Heir of House Valdris',
-        description: 'Lady Seraphina\'s ambitious younger brother',
-        faction: 'House Valdris',
-        location: 'Castle Valdris',
-        status: 'alive',
-        tags: 'noble,ambitious,schemer',
-        campaignId: campaign.id,
+        organisations: { connect: { id: heroesOrg.id } },
       },
     }),
   ])
 
-  console.log(`Created ${npcs.length} NPCs`)
+  console.log(`Created ${characters.length} characters`)
 
-  // Create relationships
-  const relationships = await Promise.all([
-    // Eldric relationships
-    prisma.relationship.create({
+  // Create relationships using UniversalRelationship
+  await Promise.all([
+    // Character to character relationships
+    prisma.universalRelationship.create({
       data: {
-        fromNpcId: npcs[0].id, // Eldric
-        toNpcId: npcs[3].id,   // Lady Seraphina
-        type: 'ally',
-        description: 'Political alliance',
+        fromEntityId: characters[0].id, // Eldric
+        fromEntityType: 'character',
+        toEntityId: characters[1].id, // Kira
+        toEntityType: 'character',
+        type: 'rival',
+        description: 'Long-standing rivalry over magical artifacts',
         strength: 7,
       },
     }),
-    prisma.relationship.create({
+    prisma.universalRelationship.create({
       data: {
-        fromNpcId: npcs[0].id, // Eldric
-        toNpcId: npcs[5].id,   // Brother Marcus
-        type: 'friend',
-        description: 'Old friends from the academy',
+        fromEntityId: characters[0].id, // Eldric
+        fromEntityType: 'character',
+        toEntityId: characters[5].id, // Brother Marcus
+        toEntityType: 'character',
+        type: 'ally',
+        description: 'Allies in the fight against dark magic',
         strength: 8,
       },
     }),
-    prisma.relationship.create({
+    prisma.universalRelationship.create({
       data: {
-        fromNpcId: npcs[0].id, // Eldric
-        toNpcId: npcs[1].id,   // Kira
-        type: 'rival',
-        description: 'Distrust due to past incident',
-        strength: 5,
-      },
-    }),
-    // Kira relationships
-    prisma.relationship.create({
-      data: {
-        fromNpcId: npcs[1].id, // Kira
-        toNpcId: npcs[6].id,   // Whisper
+        fromEntityId: characters[2].id, // Tormund
+        fromEntityType: 'character',
+        toEntityId: characters[3].id, // Lady Seraphina
+        toEntityType: 'character',
         type: 'business',
-        description: 'Regular information exchange',
+        description: 'Crafts weapons for House Valdris',
         strength: 6,
       },
     }),
-    prisma.relationship.create({
+    prisma.universalRelationship.create({
       data: {
-        fromNpcId: npcs[1].id, // Kira
-        toNpcId: npcs[7].id,   // Captain Helena
+        fromEntityId: characters[4].id, // Grimjaw
+        fromEntityType: 'character',
+        toEntityId: characters[6].id, // Aria
+        toEntityType: 'character',
         type: 'enemy',
-        description: 'Helena has been hunting Kira for years',
-        strength: 9,
-      },
-    }),
-    // Tormund relationships
-    prisma.relationship.create({
-      data: {
-        fromNpcId: npcs[2].id, // Tormund
-        toNpcId: npcs[4].id,   // Grimjaw
-        type: 'friend',
-        description: 'Bonded over shared respect for craftsmanship',
-        strength: 6,
-      },
-    }),
-    prisma.relationship.create({
-      data: {
-        fromNpcId: npcs[2].id, // Tormund
-        toNpcId: npcs[7].id,   // Captain Helena
-        type: 'ally',
-        description: 'Supplies weapons to the guard',
-        strength: 7,
-      },
-    }),
-    // Lady Seraphina relationships
-    prisma.relationship.create({
-      data: {
-        fromNpcId: npcs[3].id, // Lady Seraphina
-        toNpcId: npcs[6].id,   // Whisper
-        type: 'business',
-        description: 'Uses Whisper for political intelligence',
-        strength: 5,
-      },
-    }),
-    prisma.relationship.create({
-      data: {
-        fromNpcId: npcs[3].id, // Lady Seraphina
-        toNpcId: npcs[5].id,   // Brother Marcus
-        type: 'rival',
-        description: 'Competing for influence in the council',
-        strength: 6,
-      },
-    }),
-    // Grimjaw relationships
-    prisma.relationship.create({
-      data: {
-        fromNpcId: npcs[4].id, // Grimjaw
-        toNpcId: npcs[7].id,   // Captain Helena
-        type: 'enemy',
-        description: 'Past battles, tenuous peace',
-        strength: 8,
-      },
-    }),
-    // Brother Marcus relationships
-    prisma.relationship.create({
-      data: {
-        fromNpcId: npcs[5].id, // Brother Marcus
-        toNpcId: npcs[7].id,   // Captain Helena
-        type: 'ally',
-        description: 'Work together to maintain order',
-        strength: 7,
-      },
-    }),
-    // Whisper relationships
-    prisma.relationship.create({
-      data: {
-        fromNpcId: npcs[6].id, // Whisper
-        toNpcId: npcs[7].id,   // Captain Helena
-        type: 'unknown',
-        description: 'Complicated - mutual informants',
+        description: 'Former battlefield enemies, now uneasy allies',
         strength: 4,
       },
     }),
-    // New NPC relationships
-    prisma.relationship.create({
+    // Organisation to organisation relationships
+    prisma.universalRelationship.create({
       data: {
-        fromNpcId: npcs[8].id, // Lyra Moonwhisper
-        toNpcId: npcs[0].id,   // Eldric
-        type: 'mentor',
-        description: 'Eldric is training Lyra in advanced magic',
-        strength: 8,
-      },
-    }),
-    prisma.relationship.create({
-      data: {
-        fromNpcId: npcs[9].id, // Sergeant Aldric
-        toNpcId: npcs[7].id,   // Captain Helena
-        type: 'ally',
-        description: 'Loyal subordinate and trusted friend',
+        fromEntityId: magesGuild.id,
+        fromEntityType: 'organisation',
+        toEntityId: shadowNetwork.id,
+        toEntityType: 'organisation',
+        type: 'enemy',
+        description: 'The Guild hunts Shadow Network operatives',
         strength: 9,
       },
     }),
-    prisma.relationship.create({
+    // Organisation to character relationships
+    prisma.universalRelationship.create({
       data: {
-        fromNpcId: npcs[10].id, // Theron Valdris
-        toNpcId: npcs[3].id,    // Lady Seraphina
-        type: 'family',
-        description: 'Siblings with conflicting ambitions',
-        strength: 7,
-      },
-    }),
-    prisma.relationship.create({
-      data: {
-        fromNpcId: npcs[10].id, // Theron Valdris
-        toNpcId: npcs[1].id,    // Kira
-        type: 'business',
-        description: 'Secret dealings unknown to his sister',
-        strength: 5,
-      },
-    }),
-  ])
-
-  console.log(`Created ${relationships.length} relationships`)
-
-  // Use the crew that was created with the campaign
-  const crew = campaign.crew!
-
-  // Update the crew with additional details
-  await prisma.crew.update({
-    where: { id: crew.id },
-    data: {
-      imageUrl: 'https://api.dicebear.com/7.x/shapes/svg?seed=HeroesOfEldoria&backgroundColor=3A5F4B',
-    },
-  })
-
-  console.log(`Using campaign crew: ${crew.name}`)
-
-  // Create crew members
-  const crewMembers = await Promise.all([
-    prisma.crewMember.create({
-      data: {
-        crewId: crew.id,
-        name: 'Vex Shadowmere',
-        title: 'Rogue Leader',
-        description: 'Quick-witted half-elf with a troubled past and golden heart',
-        imageUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=VexShadowmere&backgroundColor=4a7a5f',
-      },
-    }),
-    prisma.crewMember.create({
-      data: {
-        crewId: crew.id,
-        name: 'Bjorn Ironside',
-        title: 'The Shield',
-        description: 'Stalwart dwarven warrior and the crew\'s protector',
-        imageUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=BjornIronside&backgroundColor=4a7a5f',
-      },
-    }),
-    prisma.crewMember.create({
-      data: {
-        crewId: crew.id,
-        name: 'Elara Starweaver',
-        title: 'Mystic',
-        description: 'Elven sorcerer with powers tied to the celestial bodies',
-        imageUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=ElaraStarweaver&backgroundColor=4a7a5f',
-      },
-    }),
-    prisma.crewMember.create({
-      data: {
-        crewId: crew.id,
-        name: 'Finn Brightwood',
-        title: 'The Healer',
-        description: 'Human cleric with unwavering faith and a gentle soul',
-        imageUrl: 'https://api.dicebear.com/7.x/adventurer/svg?seed=FinnBrightwood&backgroundColor=4a7a5f',
-      },
-    }),
-  ])
-
-  console.log(`Created ${crewMembers.length} crew members`)
-
-  // Create crew relationships (crew as a whole to NPCs)
-  const crewRelationships = await Promise.all([
-    prisma.crewRelationship.create({
-      data: {
-        crewId: crew.id,
-        toNpcId: npcs[0].id, // Eldric
+        fromEntityId: heroesOrg.id,
+        fromEntityType: 'organisation',
+        toEntityId: characters[0].id, // Eldric
+        toEntityType: 'character',
         type: 'ally',
-        description: 'The crew has helped Eldric on multiple quests',
-        strength: 8,
-      },
-    }),
-    prisma.crewRelationship.create({
-      data: {
-        crewId: crew.id,
-        toNpcId: npcs[6].id, // Whisper
-        type: 'business',
-        description: 'Regular clients for information',
-        strength: 6,
-      },
-    }),
-    prisma.crewRelationship.create({
-      data: {
-        crewId: crew.id,
-        toNpcId: npcs[1].id, // Kira
-        type: 'rival',
-        description: 'Crossed paths during a heist gone wrong',
-        strength: 5,
-      },
-    }),
-    prisma.crewRelationship.create({
-      data: {
-        crewId: crew.id,
-        toNpcId: npcs[7].id, // Captain Helena
-        type: 'ally',
-        description: 'Proven themselves as trustworthy to the guard',
+        description: 'The heroes work closely with the Archmage',
         strength: 7,
       },
     }),
   ])
 
-  console.log(`Created ${crewRelationships.length} crew relationships`)
+  console.log('Created relationships')
 
-  // Create individual crew member relationships
-  const memberRelationships = await Promise.all([
-    // Vex has personal history with Kira
-    prisma.crewMemberRelationship.create({
-      data: {
-        crewMemberId: crewMembers[0].id, // Vex
-        toNpcId: npcs[1].id, // Kira
-        type: 'rival',
-        description: 'Former partners, now bitter rivals',
-        strength: 7,
-      },
-    }),
-    // Bjorn trained under Tormund
-    prisma.crewMemberRelationship.create({
-      data: {
-        crewMemberId: crewMembers[1].id, // Bjorn
-        toNpcId: npcs[2].id, // Tormund
-        type: 'mentor',
-        description: 'Tormund taught Bjorn the art of smithing',
-        strength: 8,
-      },
-    }),
-    // Elara studied under Eldric
-    prisma.crewMemberRelationship.create({
-      data: {
-        crewMemberId: crewMembers[2].id, // Elara
-        toNpcId: npcs[0].id, // Eldric
-        type: 'mentor',
-        description: 'Eldric recognizes great potential in Elara',
-        strength: 6,
-      },
-    }),
-    // Finn serves Brother Marcus
-    prisma.crewMemberRelationship.create({
-      data: {
-        crewMemberId: crewMembers[3].id, // Finn
-        toNpcId: npcs[5].id, // Brother Marcus
-        type: 'ally',
-        description: 'Fellow servants of the Light',
-        strength: 9,
-      },
-    }),
-    // Vex has dealings with Whisper
-    prisma.crewMemberRelationship.create({
-      data: {
-        crewMemberId: crewMembers[0].id, // Vex
-        toNpcId: npcs[6].id, // Whisper
-        type: 'business',
-        description: 'Personal information network',
-        strength: 5,
-      },
-    }),
-  ])
-
-  console.log(`Created ${memberRelationships.length} crew member relationships`)
-
-  console.log('Database seeded successfully!')
+  console.log('Seeding complete!')
 }
 
 main()

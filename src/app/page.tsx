@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCampaigns, useCreateCampaign, useDeleteCampaign, useUpdateCampaign, useUpdateCrew } from '@/hooks/useApi'
-import { Campaign } from '@/types'
+import { useCampaigns, useCreateCampaign, useDeleteCampaign, useUpdateCampaign } from '@/hooks/useApi'
+import { Campaign, CropSettings } from '@/types'
+import ImageCropper from '@/components/ImageCropper'
 
 export default function Home() {
   const router = useRouter()
@@ -11,15 +12,15 @@ export default function Home() {
   const createCampaign = useCreateCampaign()
   const deleteCampaign = useDeleteCampaign()
   const updateCampaign = useUpdateCampaign()
-  const updateCrew = useUpdateCrew()
   
   // Create modal state
   const [showNewCampaign, setShowNewCampaign] = useState(false)
   const [newCampaignName, setNewCampaignName] = useState('')
   const [newCampaignDescription, setNewCampaignDescription] = useState('')
-  const [newCrewName, setNewCrewName] = useState('The Party')
   const [newCampaignImage, setNewCampaignImage] = useState<File | null>(null)
   const [newCampaignImagePreview, setNewCampaignImagePreview] = useState<string | null>(null)
+  const [newCampaignImageCrop, setNewCampaignImageCrop] = useState<CropSettings | null>(null)
+  const [showCreateCropper, setShowCreateCropper] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [isUploadingCreate, setIsUploadingCreate] = useState(false)
   
@@ -27,8 +28,9 @@ export default function Home() {
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
-  const [editCrewName, setEditCrewName] = useState('')
   const [editImageUrl, setEditImageUrl] = useState('')
+  const [editImageCrop, setEditImageCrop] = useState<CropSettings | null>(null)
+  const [showEditCropper, setShowEditCropper] = useState(false)
   const [editImage, setEditImage] = useState<File | null>(null)
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null)
   const [isUploadingEdit, setIsUploadingEdit] = useState(false)
@@ -46,12 +48,20 @@ export default function Home() {
   }
 
   const uploadImage = async (file: File): Promise<string | null> => {
-    const formData = new FormData()
-    formData.append('file', file)
-    const response = await fetch('/api/upload', { method: 'POST', body: formData })
-    if (!response.ok) throw new Error('Upload failed')
-    const data = await response.json()
-    return data.url
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const response = await fetch('/api/upload', { method: 'POST', body: formData })
+      if (!response.ok) {
+        console.error('Upload failed:', await response.text())
+        return null
+      }
+      const data = await response.json()
+      return data.url
+    } catch (error) {
+      console.error('Upload error:', error)
+      return null
+    }
   }
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
@@ -75,20 +85,21 @@ export default function Home() {
       if (newCampaignImage) {
         const url = await uploadImage(newCampaignImage)
         if (url) imageUrl = url
+        // Continue even if upload fails - campaign will be created without image
       }
       
       const campaign = await createCampaign.mutateAsync({
         name: newCampaignName.trim(),
         description: newCampaignDescription || undefined,
-        crewName: newCrewName || 'The Party',
         imageUrl,
+        imageCrop: newCampaignImageCrop || undefined,
       })
       setShowNewCampaign(false)
       setNewCampaignName('')
       setNewCampaignDescription('')
-      setNewCrewName('The Party')
       setNewCampaignImage(null)
       setNewCampaignImagePreview(null)
+      setNewCampaignImageCrop(null)
       router.push(`/campaign/${campaign.slug || campaign.id}`)
     } catch (error) {
       console.error('Failed to create campaign:', error)
@@ -102,18 +113,19 @@ export default function Home() {
     setEditingCampaign(campaign)
     setEditName(campaign.name)
     setEditDescription(campaign.description || '')
-    setEditCrewName(campaign.crew?.name || '')
     setEditImageUrl(campaign.imageUrl || '')
+    setEditImageCrop(campaign.imageCrop || null)
   }
 
   const closeEditModal = () => {
     setEditingCampaign(null)
     setEditName('')
     setEditDescription('')
-    setEditCrewName('')
     setEditImageUrl('')
     setEditImage(null)
     setEditImagePreview(null)
+    setEditImageCrop(null)
+    setShowEditCropper(false)
   }
 
   const handleUpdateCampaign = async (e: React.FormEvent) => {
@@ -144,15 +156,8 @@ export default function Home() {
         name: editName.trim(),
         description: editDescription || undefined,
         imageUrl,
+        imageCrop: editImageCrop || undefined,
       })
-      
-      // Update crew name if changed
-      if (editingCampaign.crew && editCrewName.trim() && editCrewName !== editingCampaign.crew.name) {
-        await updateCrew.mutateAsync({
-          id: editingCampaign.crew.id,
-          data: { name: editCrewName.trim() },
-        })
-      }
       
       closeEditModal()
     } catch (error) {
@@ -166,7 +171,7 @@ export default function Home() {
   const handleDeleteCampaign = async () => {
     if (!editingCampaign) return
     
-    if (!confirm(`Are you sure you want to delete "${editingCampaign.name}"?\n\nThis will permanently delete all NPCs, relationships, and data associated with this campaign. This action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete "${editingCampaign.name}"?\n\nThis will permanently delete all characters, organisations, relationships, and data associated with this campaign. This action cannot be undone.`)) {
       return
     }
     
@@ -193,16 +198,19 @@ export default function Home() {
   return (
     <div className="campaign-select-page">
       <div className="campaign-header">
-        <h1>🎭 NPC Relationship Manager</h1>
+        <h1>� Character Web</h1>
         <p>Select a campaign or create a new one</p>
       </div>
 
       <div className="campaign-grid">
         {campaigns?.map(campaign => (
           <div key={campaign.id} className="campaign-card-wrapper">
-            <button
+            <div
               onClick={() => router.push(`/campaign/${campaign.slug}`)}
               className="campaign-card"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && router.push(`/campaign/${campaign.slug}`)}
             >
               <button
                 onClick={(e) => {
@@ -216,16 +224,23 @@ export default function Home() {
               </button>
               <div className="campaign-card-icon">
                 {campaign.imageUrl ? (
-                  <img src={campaign.imageUrl} alt="" className="campaign-icon-img" />
+                  <img 
+                    src={campaign.imageUrl} 
+                    alt="" 
+                    className="campaign-icon-img"
+                    style={campaign.imageCrop ? {
+                      transform: `scale(${campaign.imageCrop.zoom}) translate(${campaign.imageCrop.offsetX}%, ${campaign.imageCrop.offsetY}%)`
+                    } : undefined}
+                  />
                 ) : '📜'}
               </div>
               <h2>{campaign.name}</h2>
               {campaign.description && <p>{campaign.description}</p>}
               <div className="campaign-meta">
-                <span>👥 {campaign.crew?.name || 'No crew'} ({campaign.crew?._count?.members || 0})</span>
-                <span>🎭 {campaign._count?.npcs || 0} NPCs</span>
+                <span>👤 {campaign._count?.characters || 0} Characters</span>
+                <span>🏛️ {campaign._count?.organisations || 0} Orgs</span>
               </div>
-            </button>
+            </div>
           </div>
         ))}
 
@@ -279,30 +294,37 @@ export default function Home() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="crewName">Party/Crew Name</label>
-                <input
-                  id="crewName"
-                  type="text"
-                  value={newCrewName}
-                  onChange={e => setNewCrewName(e.target.value)}
-                  placeholder="e.g., The Iron Wolves"
-                />
-                <small>A crew will be automatically created for your party</small>
-              </div>
-
-              <div className="form-group">
                 <label htmlFor="campaignImage">Campaign Icon</label>
                 <div className="image-upload-area">
                   {newCampaignImagePreview ? (
                     <div className="image-preview">
-                      <img src={newCampaignImagePreview} alt="Preview" />
-                      <button
-                        type="button"
-                        onClick={() => handleImageChange(null, setNewCampaignImage, setNewCampaignImagePreview)}
-                        className="remove-image-btn"
-                      >
-                        ✕
-                      </button>
+                      <img 
+                        src={newCampaignImagePreview} 
+                        alt="Preview"
+                        style={newCampaignImageCrop ? {
+                          transform: `scale(${newCampaignImageCrop.zoom}) translate(${newCampaignImageCrop.offsetX}%, ${newCampaignImageCrop.offsetY}%)`
+                        } : undefined}
+                      />
+                      <div className="image-preview-buttons">
+                        <button
+                          type="button"
+                          onClick={() => setShowCreateCropper(true)}
+                          className="adjust-image-btn"
+                          title="Adjust image"
+                        >
+                          ✂️
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleImageChange(null, setNewCampaignImage, setNewCampaignImagePreview)
+                            setNewCampaignImageCrop(null)
+                          }}
+                          className="remove-image-btn"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <label className="upload-label">
@@ -319,6 +341,18 @@ export default function Home() {
                 </div>
                 <small>Optional: Upload an image for the campaign card</small>
               </div>
+
+              {showCreateCropper && newCampaignImagePreview && (
+                <ImageCropper
+                  imageUrl={newCampaignImagePreview}
+                  initialCropSettings={newCampaignImageCrop || undefined}
+                  onChange={(crop) => {
+                    setNewCampaignImageCrop(crop)
+                    setShowCreateCropper(false)
+                  }}
+                  onCancel={() => setShowCreateCropper(false)}
+                />
+              )}
 
               <div className="form-actions">
                 <button type="button" onClick={() => setShowNewCampaign(false)} className="btn-secondary">
@@ -363,33 +397,39 @@ export default function Home() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="editCrewName">Party/Crew Name</label>
-                <input
-                  id="editCrewName"
-                  type="text"
-                  value={editCrewName}
-                  onChange={e => setEditCrewName(e.target.value)}
-                  placeholder="e.g., The Iron Wolves"
-                />
-              </div>
-
-              <div className="form-group">
                 <label htmlFor="editImageUpload">Campaign Icon</label>
                 <div className="image-upload-area">
                   {(editImagePreview || editImageUrl) ? (
                     <div className="image-preview">
-                      <img src={editImagePreview || editImageUrl} alt="Preview" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditImage(null)
-                          setEditImagePreview(null)
-                          setEditImageUrl('')
-                        }}
-                        className="remove-image-btn"
-                      >
-                        ✕
-                      </button>
+                      <img 
+                        src={editImagePreview || editImageUrl} 
+                        alt="Preview"
+                        style={editImageCrop ? {
+                          transform: `scale(${editImageCrop.zoom}) translate(${editImageCrop.offsetX}%, ${editImageCrop.offsetY}%)`
+                        } : undefined}
+                      />
+                      <div className="image-preview-buttons">
+                        <button
+                          type="button"
+                          onClick={() => setShowEditCropper(true)}
+                          className="adjust-image-btn"
+                          title="Adjust image"
+                        >
+                          ✂️
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditImage(null)
+                            setEditImagePreview(null)
+                            setEditImageUrl('')
+                            setEditImageCrop(null)
+                          }}
+                          className="remove-image-btn"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <label className="upload-label">
@@ -407,6 +447,18 @@ export default function Home() {
                 <small>Optional: Upload an image for the campaign card</small>
               </div>
 
+              {showEditCropper && (editImagePreview || editImageUrl) && (
+                <ImageCropper
+                  imageUrl={editImagePreview || editImageUrl}
+                  initialCropSettings={editImageCrop || undefined}
+                  onChange={(crop) => {
+                    setEditImageCrop(crop)
+                    setShowEditCropper(false)
+                  }}
+                  onCancel={() => setShowEditCropper(false)}
+                />
+              )}
+
               <div className="form-actions campaign-edit-actions">
                 <div className="form-actions-row">
                   <button type="button" onClick={closeEditModal} className="btn-secondary">
@@ -414,10 +466,10 @@ export default function Home() {
                   </button>
                   <button 
                     type="submit" 
-                    disabled={updateCampaign.isPending || updateCrew.isPending || isUploadingEdit} 
+                    disabled={updateCampaign.isPending || isUploadingEdit} 
                     className="btn-primary"
                   >
-                    {isUploadingEdit ? 'Uploading...' : updateCampaign.isPending || updateCrew.isPending ? 'Saving...' : 'Save'}
+                    {isUploadingEdit ? 'Uploading...' : updateCampaign.isPending ? 'Saving...' : 'Save'}
                   </button>
                 </div>
                 <button 

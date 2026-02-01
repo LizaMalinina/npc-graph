@@ -1,5 +1,16 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { EntityType, CropSettings } from '@/types'
+
+// Helper to parse imageCrop JSON string
+function parseImageCrop(imageCrop: string | null): CropSettings | null {
+  if (!imageCrop) return null
+  try {
+    return JSON.parse(imageCrop) as CropSettings
+  } catch {
+    return null
+  }
+}
 
 // Helper to find campaign by id or slug
 async function findCampaignWithData(idOrSlug: string) {
@@ -7,13 +18,16 @@ async function findCampaignWithData(idOrSlug: string) {
   let campaign = await prisma.campaign.findUnique({
     where: { id: idOrSlug },
     include: {
-      crew: {
+      characters: {
         include: {
-          members: true,
-          relationshipsFrom: true
+          organisations: true
         }
       },
-      npcs: true
+      organisations: {
+        include: {
+          members: true
+        }
+      }
     }
   })
   
@@ -21,13 +35,16 @@ async function findCampaignWithData(idOrSlug: string) {
     campaign = await prisma.campaign.findUnique({
       where: { slug: idOrSlug },
       include: {
-        crew: {
+        characters: {
           include: {
-            members: true,
-            relationshipsFrom: true
+            organisations: true
           }
         },
-        npcs: true
+        organisations: {
+          include: {
+            members: true
+          }
+        }
       }
     })
   }
@@ -49,118 +66,87 @@ export async function GET(
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
     }
     
-    // Get relationships for this campaign's NPCs
-    const npcIds = campaign.npcs.map(n => n.id)
-    const relationships = await prisma.relationship.findMany({
+    // Get all entity IDs for relationship lookup
+    const characterIds = campaign.characters.map(c => c.id)
+    const organisationIds = campaign.organisations.map(o => o.id)
+    const allEntityIds = [...characterIds, ...organisationIds]
+    
+    // Get all relationships involving these entities
+    const relationships = await prisma.universalRelationship.findMany({
       where: {
         OR: [
-          { fromNpcId: { in: npcIds } },
-          { toNpcId: { in: npcIds } }
+          { fromEntityId: { in: allEntityIds } },
+          { toEntityId: { in: allEntityIds } }
         ]
       }
     })
     
-    // Get crew member relationships
-    const crewMemberIds = campaign.crew?.members.map(m => m.id) || []
-    const crewMemberRelationships = await prisma.crewMemberRelationship.findMany({
-      where: {
-        crewMemberId: { in: crewMemberIds }
-      },
-      include: {
-        crewMember: true
-      }
-    })
-    
-    // NPC nodes
-    const npcNodes = campaign.npcs.map(npc => ({
-      id: npc.id,
-      name: npc.name,
-      title: npc.title,
-      description: npc.description,
-      imageUrl: npc.imageUrl,
-      faction: npc.faction,
-      location: npc.location,
-      status: npc.status,
-      tags: npc.tags ? npc.tags.split(',').map(t => t.trim()) : [],
-      x: npc.posX,
-      y: npc.posY,
-      nodeType: 'npc' as const,
+    // Character nodes
+    const characterNodes = campaign.characters.map(char => ({
+      id: char.id,
+      name: char.name,
+      title: char.title,
+      description: char.description,
+      imageUrl: char.imageUrl,
+      imageCrop: parseImageCrop(char.imageCrop),
+      faction: char.faction,
+      location: char.location,
+      status: char.status,
+      tags: char.tags ? char.tags.split(',').map(t => t.trim()) : [],
+      x: char.posX,
+      y: char.posY,
+      entityType: 'character' as EntityType,
+      // Get pin color from first organisation, or null for white pin
+      pinColor: char.organisations.length > 0 ? char.organisations[0].pinColor : null,
+      organisations: char.organisations.map(org => ({
+        id: org.id,
+        name: org.name,
+        pinColor: org.pinColor,
+      })),
     }))
     
-    // Crew node (for collapsed view)
-    const crewNodes = campaign.crew ? [{
-      id: `crew-${campaign.crew.id}`,
-      name: campaign.crew.name,
-      title: `${campaign.crew.members.length} members`,
-      description: campaign.crew.description,
-      imageUrl: campaign.crew.imageUrl,
+    // Organisation nodes
+    const organisationNodes = campaign.organisations.map(org => ({
+      id: org.id,
+      name: org.name,
+      title: `${org.members.length} members`,
+      description: org.description,
+      imageUrl: org.imageUrl,
+      imageCrop: parseImageCrop(org.imageCrop),
+      pinColor: org.pinColor,
       faction: null,
       location: null,
-      status: 'alive',
-      tags: ['crew'],
-      nodeType: 'crew' as const,
-      members: campaign.crew.members.map(m => ({
-        id: `member-${m.id}`,
+      status: 'active',
+      tags: ['organisation'],
+      x: org.posX,
+      y: org.posY,
+      entityType: 'organisation' as EntityType,
+      members: org.members.map(m => ({
+        id: m.id,
         name: m.name,
         title: m.title,
         description: m.description,
         imageUrl: m.imageUrl,
-        faction: null,
-        location: null,
-        status: 'alive',
-        tags: ['crew-member'],
-        nodeType: 'crew-member' as const,
-        crewId: campaign.crew!.id,
+        imageCrop: parseImageCrop(m.imageCrop),
+        faction: m.faction,
+        location: m.location,
+        status: m.status,
+        tags: m.tags ? m.tags.split(',').map(t => t.trim()) : [],
+        entityType: 'character' as EntityType,
+        pinColor: org.pinColor, // Inherit from org
       })),
-    }] : []
-    
-    // Crew member nodes (for expanded view)
-    const crewMemberNodes = campaign.crew?.members.map(m => ({
-      id: `member-${m.id}`,
-      name: m.name,
-      title: m.title,
-      description: m.description,
-      imageUrl: m.imageUrl,
-      faction: null,
-      location: null,
-      status: 'alive',
-      tags: ['crew-member'],
-      nodeType: 'crew-member' as const,
-      crewId: campaign.crew!.id,
-    })) || []
-    
-    // NPC to NPC relationships
-    const npcLinks = relationships.map(rel => ({
-      id: rel.id,
-      source: rel.fromNpcId,
-      target: rel.toNpcId,
-      type: rel.type,
-      description: rel.description,
-      strength: rel.strength,
-      linkSource: 'npc' as const,
     }))
     
-    // Crew to NPC relationships
-    const crewLinks = campaign.crew?.relationshipsFrom.map(rel => ({
-      id: `crew-rel-${rel.id}`,
-      source: `crew-${rel.crewId}`,
-      target: rel.toNpcId,
+    // All relationship links
+    const links = relationships.map(rel => ({
+      id: rel.id,
+      source: rel.fromEntityId,
+      sourceType: rel.fromEntityType as EntityType,
+      target: rel.toEntityId,
+      targetType: rel.toEntityType as EntityType,
       type: rel.type,
       description: rel.description,
       strength: rel.strength,
-      linkSource: 'crew' as const,
-    })) || []
-    
-    // Crew member to NPC relationships
-    const memberLinks = crewMemberRelationships.map(rel => ({
-      id: `member-rel-${rel.id}`,
-      source: `member-${rel.crewMemberId}`,
-      target: rel.toNpcId,
-      type: rel.type,
-      description: rel.description,
-      strength: rel.strength,
-      linkSource: 'crew-member' as const,
-      crewId: rel.crewMember.crewId,
     }))
     
     return NextResponse.json({
@@ -169,12 +155,17 @@ export async function GET(
         name: campaign.name,
         description: campaign.description,
       },
-      nodes: npcNodes,
-      links: npcLinks,
-      crews: crewNodes,
-      crewMemberNodes,
-      crewLinks,
-      memberLinks,
+      nodes: [...characterNodes, ...organisationNodes],
+      links,
+      organisations: campaign.organisations.map(o => ({
+        id: o.id,
+        name: o.name,
+        description: o.description,
+        imageUrl: o.imageUrl,
+        pinColor: o.pinColor,
+        members: o.members,
+        _count: { members: o.members.length }
+      })),
     })
   } catch (error) {
     console.error('Error fetching campaign graph data:', error)

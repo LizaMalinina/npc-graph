@@ -37,14 +37,14 @@ export default function DetectiveNpcPanel({
   isMobile = false,
 }: DetectiveNpcPanelProps) {
   const [showFullDescription, setShowFullDescription] = useState(false)
-  const isCrew = node.nodeType === 'crew'
-  const isCrewMember = node.nodeType === 'crew-member'
+  const isCrew = node.entityType === 'organisation'
+  const isCrewMember = node.entityType === 'character'
   
   const DESCRIPTION_THRESHOLD = 100 // characters before showing "show more"
   const shouldTruncate = isMobile && node.description && node.description.length > DESCRIPTION_THRESHOLD
   
   // Determine edit button text based on node type
-  const editButtonText = isCrew ? 'Edit Crew' : isCrewMember ? 'Edit Character' : 'Edit NPC'
+  const editButtonText = isCrew ? 'Edit Organisation' : 'Edit Character'
 
   // Mobile horizontal layout for NPCs and crew members (not crews)
   if (isMobile && !isCrew) {

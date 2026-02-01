@@ -4,32 +4,28 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import DetectiveBoard from '@/components/detective/DetectiveBoard'
 import DetectiveFilterPanel from '@/components/detective/DetectiveFilterPanel'
-import DetectiveNpcPanel from '@/components/detective/DetectiveNpcPanel'
+import DetectiveNodePanel from '@/components/detective/DetectiveNodePanel'
 import DetectiveLegend from '@/components/detective/DetectiveLegend'
-import NpcForm from '@/components/NpcForm'
+import CharacterForm from '@/components/CharacterForm'
+import OrganisationForm from '@/components/OrganisationForm'
 import RelationshipForm from '@/components/RelationshipForm'
-import { GraphNode, GraphLink, FilterState, Npc, Crew, GraphData } from '@/types'
+import { GraphNode, GraphLink, FilterState, Character, Organisation, GraphData, EntityType } from '@/types'
 import {
   useCampaignGraphData,
   useCampaign,
-  useCreateNpc,
-  useUpdateNpc,
-  useDeleteNpc,
+  useCreateCharacter,
+  useUpdateCharacter,
+  useDeleteCharacter,
+  useCreateOrganisation,
+  useUpdateOrganisation,
+  useDeleteOrganisation,
   useCreateRelationship,
   useUpdateRelationship,
   useDeleteRelationship,
-  useAddCrewMember,
-  useUpdateCrewMember,
-  useDeleteCrewMember,
-  useCreateCrewRelationship,
-  useCreateCrewMemberRelationship,
-  useDeleteCrewRelationship,
-  useDeleteCrewMemberRelationship,
-  useUpdateCrewRelationship,
-  useUpdateCrewMemberRelationship,
+  useAddMember,
+  useRemoveMember,
 } from '@/hooks/useApi'
 import { useMobileDetection } from '@/hooks/useMobileDetection'
-import { parseRelationshipId } from '@/lib/utils'
 
 interface CampaignBoardProps {
   campaignId: string
@@ -44,26 +40,16 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [showMobileLegend, setShowMobileLegend] = useState(false)
-  const [showMobileRoles, setShowMobileRoles] = useState(false)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
 
   // Close mobile panels when selecting a node
   useEffect(() => {
-    if (isMobile) {
+    if (isMobile && selectedNode) {
       setShowMobileMenu(false)
       setShowMobileFilters(false)
       setShowMobileLegend(false)
-      setShowMobileRoles(false)
     }
   }, [selectedNode, isMobile])
-
-  // Helper to toggle mobile menus exclusively
-  const toggleMobilePanel = (panel: 'menu' | 'filters' | 'legend' | 'roles') => {
-    setShowMobileMenu(panel === 'menu' ? !showMobileMenu : false)
-    setShowMobileFilters(panel === 'filters' ? !showMobileFilters : false)
-    setShowMobileLegend(panel === 'legend' ? !showMobileLegend : false)
-    setShowMobileRoles(panel === 'roles' ? !showMobileRoles : false)
-  }
 
   const [filters, setFilters] = useState<FilterState>({
     factions: [],
@@ -71,51 +57,42 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
     statuses: [],
     relationshipTypes: [],
     searchQuery: '',
-    crewViewMode: 'collapsed',
-    showCrewMembersOnly: false,
-    showNpcsOnly: false,
+    viewMode: 'collapsed',
+    showOrganisationsOnly: false,
+    showCharactersOnly: false,
   })
 
-  const [showNpcForm, setShowNpcForm] = useState(false)
+  const [showCharacterForm, setShowCharacterForm] = useState(false)
+  const [showOrganisationForm, setShowOrganisationForm] = useState(false)
   const [showRelationshipForm, setShowRelationshipForm] = useState(false)
   const [preselectedFromId, setPreselectedFromId] = useState<string | null>(null)
-  const [parentCrewNode, setParentCrewNode] = useState<GraphNode | null>(null)
-  const [editingNpc, setEditingNpc] = useState<Npc | null>(null)
-  const [editingCrewMemberId, setEditingCrewMemberId] = useState<string | null>(null)
+  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null)
+  const [editingOrganisation, setEditingOrganisation] = useState<Organisation | null>(null)
   const [editingRelationship, setEditingRelationship] = useState<GraphLink | null>(null)
   const [showLegend, setShowLegend] = useState(false)
+  const [multiSelectedNodeIds, setMultiSelectedNodeIds] = useState<Set<string>>(new Set())
+  const [isMultiSelectFilterActive, setIsMultiSelectFilterActive] = useState(false)
+  const [parentOrg, setParentOrg] = useState<GraphNode | null>(null)
 
-  // API hooks - use campaign-specific data
+  // API hooks
   const { data: graphData, isLoading, error } = useCampaignGraphData(campaignId)
   const { data: campaign } = useCampaign(campaignId)
-  const createNpc = useCreateNpc()
-  const updateNpc = useUpdateNpc()
-  const deleteNpc = useDeleteNpc()
+  const createCharacter = useCreateCharacter()
+  const updateCharacter = useUpdateCharacter()
+  const deleteCharacter = useDeleteCharacter()
+  const createOrganisation = useCreateOrganisation()
+  const updateOrganisation = useUpdateOrganisation()
+  const deleteOrganisation = useDeleteOrganisation()
   const createRelationship = useCreateRelationship()
   const updateRelationship = useUpdateRelationship()
-  const addCrewMember = useAddCrewMember()
-  const updateCrewMember = useUpdateCrewMember()
-  const deleteCrewMember = useDeleteCrewMember()
   const deleteRelationship = useDeleteRelationship()
-  const deleteCrewRelationship = useDeleteCrewRelationship()
-  const deleteCrewMemberRelationship = useDeleteCrewMemberRelationship()
-  const updateCrewRelationship = useUpdateCrewRelationship()
-  const updateCrewMemberRelationship = useUpdateCrewMemberRelationship()
-  const createCrewRelationship = useCreateCrewRelationship()
-  const createCrewMemberRelationship = useCreateCrewMemberRelationship()
+  const addMember = useAddMember()
+  const removeMember = useRemoveMember()
 
-  // Get crew from graph data
-  const crews = useMemo(() => {
-    if (!graphData?.crews) return []
-    return graphData.crews.map(c => ({
-      id: c.id.replace('crew-', ''),
-      name: c.name,
-      description: null,
-      imageUrl: c.imageUrl,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      members: c.members,
-    })) as Crew[]
+  // Get organisations from graph data
+  const organisations = useMemo(() => {
+    if (!graphData?.organisations) return []
+    return graphData.organisations
   }, [graphData])
 
   // Compute relationships for selected node
@@ -124,716 +101,868 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       return { from: [], to: [] }
     }
 
-    // Get all possible links including crew links
-    let allLinks = [...graphData.links]
-    const extendedData = graphData as GraphData & { 
-      crewLinks?: GraphLink[]
-      memberLinks?: GraphLink[]
-      crews?: GraphNode[]
-      crewMemberNodes?: GraphNode[]
-    }
+    const allLinks = graphData.links || []
+    const allNodes = graphData.nodes || []
     
-    // Include crew links if available
-    if (extendedData.crewLinks) {
-      allLinks = [...allLinks, ...extendedData.crewLinks]
-    }
-    // Include member links if available
-    if (extendedData.memberLinks) {
-      allLinks = [...allLinks, ...extendedData.memberLinks]
-    }
+    const fromLinks = allLinks.filter(link => link.source === selectedNode.id)
+    const toLinks = allLinks.filter(link => link.target === selectedNode.id)
     
-    // Get all possible nodes including crews and members
-    let allNodes = [...graphData.nodes]
-    if (extendedData.crews) {
-      allNodes = [...allNodes, ...extendedData.crews]
+    return {
+      from: fromLinks.map(link => ({
+        ...link,
+        targetNode: allNodes.find(n => n.id === link.target),
+      })),
+      to: toLinks.map(link => ({
+        ...link,
+        sourceNode: allNodes.find(n => n.id === link.source),
+      })),
     }
-    if (extendedData.crewMemberNodes) {
-      allNodes = [...allNodes, ...extendedData.crewMemberNodes]
-    }
+  }, [selectedNode, graphData])
 
-    let relevantLinks = allLinks
-    if (filters.relationshipTypes.length > 0) {
-      relevantLinks = relevantLinks.filter(l => filters.relationshipTypes.includes(l.type))
-    }
-
-    const from = relevantLinks
-      .filter(l => {
-        const sourceId = typeof l.source === 'object' ? (l.source as { id: string }).id : l.source
-        return sourceId === selectedNode.id
-      })
-      .map(l => {
-        const targetId = typeof l.target === 'object' ? (l.target as { id: string }).id : l.target
-        const target = allNodes.find(n => n.id === targetId)
-        return { id: l.id, type: l.type, target: target!, description: l.description }
-      })
-      .filter(r => r.target)
-
-    const to = relevantLinks
-      .filter(l => {
-        const targetId = typeof l.target === 'object' ? (l.target as { id: string }).id : l.target
-        return targetId === selectedNode.id
-      })
-      .map(l => {
-        const sourceId = typeof l.source === 'object' ? (l.source as { id: string }).id : l.source
-        const source = allNodes.find(n => n.id === sourceId)
-        return { id: l.id, type: l.type, source: source!, description: l.description }
-      })
-      .filter(r => r.source)
-
-    return { from, to }
-  }, [selectedNode, graphData, filters.relationshipTypes])
-
-  // Handlers
+  // Handle node selection
   const handleNodeClick = (node: GraphNode) => {
-    if (!selectedNode || selectedNode.id !== node.id) {
-      setParentCrewNode(null)
-    }
-    setSelectedNode(node)
-  }
-
-  const handleMemberClick = (member: GraphNode) => {
-    // Find the parent crew from graph data
-    const crewNode = graphData?.crews?.find(c => 
-      c.members?.some(m => m.id === member.id || `member-${m.id}` === member.id)
-    )
-    if (crewNode) {
-      setParentCrewNode(crewNode as GraphNode)
-    }
-    setSelectedNode(member)
-  }
-
-  const handleBackToCrew = () => {
-    if (parentCrewNode) {
-      setSelectedNode(parentCrewNode)
-      setParentCrewNode(null)
+    if (selectedNode?.id === node.id) {
+      setSelectedNode(null)
+    } else {
+      setSelectedNode(node)
     }
   }
 
-  const handleEditNpc = () => {
-    if (selectedNode && selectedNode.nodeType !== 'crew') {
-      // Check if this is a crew member (ID starts with "member-")
-      const isCrewMember = selectedNode.nodeType === 'crew-member' || selectedNode.id.startsWith('member-')
-      
-      if (isCrewMember) {
-        // Extract the actual crew member ID (remove "member-" prefix if present)
-        const actualId = selectedNode.id.startsWith('member-') 
-          ? selectedNode.id.replace('member-', '') 
-          : selectedNode.id
-        setEditingCrewMemberId(actualId)
-      } else {
-        setEditingCrewMemberId(null)
-      }
-      
-      setEditingNpc({
+  // Handle creating a new character
+  const handleCreateCharacter = async (data: Partial<Character>) => {
+    try {
+      await createCharacter.mutateAsync({
+        ...data,
+        campaignId: campaign?.id, // Use actual campaign ID, not slug
+      })
+      setShowCharacterForm(false)
+    } catch (error) {
+      console.error('Failed to create character:', error)
+    }
+  }
+
+  // Handle creating a character as an org member
+  const handleCreateOrgMember = async (orgId: string, data: { name: string; title?: string; description?: string; imageUrl?: string }) => {
+    try {
+      // First create the character
+      const newCharacter = await createCharacter.mutateAsync({
+        name: data.name,
+        title: data.title,
+        description: data.description,
+        imageUrl: data.imageUrl,
+        campaignId: campaign?.id,
+      })
+      // Then add them to the organisation
+      await addMember.mutateAsync({
+        characterId: newCharacter.id,
+        organisationId: orgId,
+      })
+      setShowCharacterForm(false)
+    } catch (error) {
+      console.error('Failed to create org member:', error)
+    }
+  }
+
+  // Handle updating a character
+  const handleUpdateCharacter = async (data: Partial<Character>) => {
+    if (!editingCharacter) return
+    try {
+      await updateCharacter.mutateAsync({
+        id: editingCharacter.id,
+        data,
+      })
+      setEditingCharacter(null)
+      setSelectedNode(null)
+    } catch (error) {
+      console.error('Failed to update character:', error)
+    }
+  }
+
+  // Handle deleting a character
+  const handleDeleteCharacter = async () => {
+    if (!editingCharacter) return
+    try {
+      await deleteCharacter.mutateAsync(editingCharacter.id)
+      setEditingCharacter(null)
+      setSelectedNode(null)
+    } catch (error) {
+      console.error('Failed to delete character:', error)
+    }
+  }
+
+  // Handle creating a new organisation
+  const handleCreateOrganisation = async (data: Partial<Organisation>) => {
+    try {
+      await createOrganisation.mutateAsync({
+        ...data,
+        campaignId: campaign?.id, // Use actual campaign ID, not slug
+      })
+      setShowOrganisationForm(false)
+    } catch (error) {
+      console.error('Failed to create organisation:', error)
+    }
+  }
+
+  // Handle updating an organisation
+  const handleUpdateOrganisation = async (data: Partial<Organisation>) => {
+    if (!editingOrganisation) return
+    try {
+      await updateOrganisation.mutateAsync({
+        id: editingOrganisation.id,
+        data,
+      })
+      setEditingOrganisation(null)
+      setSelectedNode(null)
+    } catch (error) {
+      console.error('Failed to update organisation:', error)
+    }
+  }
+
+  // Handle deleting an organisation
+  const handleDeleteOrganisation = async () => {
+    if (!editingOrganisation) return
+    try {
+      await deleteOrganisation.mutateAsync(editingOrganisation.id)
+      setEditingOrganisation(null)
+      setSelectedNode(null)
+    } catch (error) {
+      console.error('Failed to delete organisation:', error)
+    }
+  }
+
+  // Handle creating a relationship
+  const handleCreateRelationship = async (data: {
+    fromEntityId: string
+    fromEntityType: EntityType
+    toEntityId: string
+    toEntityType: EntityType
+    type: string
+    description?: string
+    strength: number
+  }) => {
+    try {
+      await createRelationship.mutateAsync(data)
+      setShowRelationshipForm(false)
+      setPreselectedFromId(null)
+    } catch (error) {
+      console.error('Failed to create relationship:', error)
+    }
+  }
+
+  // Handle updating a relationship
+  const handleUpdateRelationship = async (data: Partial<GraphLink>) => {
+    if (!editingRelationship) return
+    try {
+      await updateRelationship.mutateAsync({
+        id: editingRelationship.id,
+        data,
+      })
+      setEditingRelationship(null)
+    } catch (error) {
+      console.error('Failed to update relationship:', error)
+    }
+  }
+
+  // Handle deleting a relationship
+  const handleDeleteRelationship = async () => {
+    if (!editingRelationship) return
+    try {
+      await deleteRelationship.mutateAsync(editingRelationship.id)
+      setEditingRelationship(null)
+    } catch (error) {
+      console.error('Failed to delete relationship:', error)
+    }
+  }
+
+  // Handle adding relationship from node panel
+  const handleAddRelationship = () => {
+    if (!selectedNode) return
+    setPreselectedFromId(selectedNode.id)
+    setShowRelationshipForm(true)
+  }
+
+  // Handle editing from node panel
+  const handleEditNode = () => {
+    if (!selectedNode) return
+    if (selectedNode.entityType === 'organisation') {
+      setEditingOrganisation({
         id: selectedNode.id,
         name: selectedNode.name,
-        title: selectedNode.title,
-        description: selectedNode.description || null,
+        description: selectedNode.description,
         imageUrl: selectedNode.imageUrl,
-        faction: selectedNode.faction,
-        location: selectedNode.location,
-        status: selectedNode.status || 'alive',
-        tags: selectedNode.tags?.join(', ') || null,
-        posX: selectedNode.x,
-        posY: selectedNode.y,
-        campaignId,
+        imageCrop: selectedNode.imageCrop,
+        pinColor: selectedNode.pinColor,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
-      setShowNpcForm(true)
+    } else {
+      setEditingCharacter({
+        id: selectedNode.id,
+        name: selectedNode.name,
+        title: selectedNode.title,
+        description: selectedNode.description,
+        imageUrl: selectedNode.imageUrl,
+        imageCrop: selectedNode.imageCrop,
+        faction: selectedNode.faction,
+        location: selectedNode.location,
+        status: selectedNode.status || 'alive',
+        tags: selectedNode.tags?.join(', '),
+        organisations: selectedNode.organisations as Organisation[] | undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
     }
   }
 
-  const handleCreateNpc = async (npcData: Partial<Npc>) => {
-    // Use the actual campaign ID from loaded data (graphData.campaign.id), not the URL slug
-    const actualCampaignId = graphData?.campaign?.id || campaignId
-    await createNpc.mutateAsync({ ...npcData, campaignId: actualCampaignId })
-    setShowNpcForm(false)
+  // Handle deleting from node panel
+  const handleDeleteNode = async () => {
+    if (!selectedNode) return
+    if (selectedNode.entityType === 'organisation') {
+      await deleteOrganisation.mutateAsync(selectedNode.id)
+    } else {
+      await deleteCharacter.mutateAsync(selectedNode.id)
+    }
+    setSelectedNode(null)
   }
-
-  const handleUpdateNpc = async (npcData: Partial<Npc>) => {
-    if (editingNpc) {
-      // Check if we're editing a crew member
-      if (editingCrewMemberId) {
-        await updateCrewMember.mutateAsync({ 
-          id: editingCrewMemberId, 
-          data: {
-            name: npcData.name,
-            title: npcData.title || undefined,
-            description: npcData.description || undefined,
-            imageUrl: npcData.imageUrl || undefined,
-          }
-        })
-      } else {
-        await updateNpc.mutateAsync({ id: editingNpc.id, data: npcData })
-      }
-      setShowNpcForm(false)
-      setEditingNpc(null)
-      setEditingCrewMemberId(null)
-      setSelectedNode(null)
-    }
-  }
-
-  const handleDeleteNpc = async () => {
-    if (editingNpc) {
-      // Check if we're deleting a crew member
-      if (editingCrewMemberId) {
-        await deleteCrewMember.mutateAsync(editingCrewMemberId)
-      } else {
-        await deleteNpc.mutateAsync(editingNpc.id)
-      }
-      setShowNpcForm(false)
-      setEditingNpc(null)
-      setEditingCrewMemberId(null)
-      setSelectedNode(null)
-    }
-  }
-
-  const handleCreateCrewMember = async (crewId: string, data: { name: string; title?: string; description?: string; imageUrl?: string }) => {
-    await addCrewMember.mutateAsync({ crewId, data })
-    setShowNpcForm(false)
-  }
-
-  const handleAddConnectionFromNode = () => {
-    if (selectedNode) {
-      setPreselectedFromId(selectedNode.id)
-      setEditingRelationship(null)
-      setShowRelationshipForm(true)
-    }
-  }
-
-  const handleCreateRelationship = async (relData: {
-    fromNpcId: string
-    toNpcId: string
-    type: string
-    description?: string
-    strength: number
-  }) => {
-    const { fromNpcId, toNpcId, type, description, strength } = relData
-    if (fromNpcId && toNpcId && type) {
-      try {
-        const isFromCrew = fromNpcId.startsWith('crew-')
-        const isFromCrewMember = fromNpcId.startsWith('member-')
-        const isToCrew = toNpcId.startsWith('crew-')
-        const isToCrewMember = toNpcId.startsWith('member-')
-        
-        if (isFromCrew && !isToCrew && !isToCrewMember) {
-          // Crew to NPC relationship
-          const crewId = fromNpcId.replace('crew-', '')
-          await createCrewRelationship.mutateAsync({
-            crewId,
-            toNpcId,
-            type,
-            description: description ?? undefined,
-            strength: strength ?? 5,
-          })
-        } else if (isFromCrewMember && !isToCrew && !isToCrewMember) {
-          // Crew member to NPC relationship
-          const crewMemberId = fromNpcId.replace('member-', '')
-          await createCrewMemberRelationship.mutateAsync({
-            crewMemberId,
-            toNpcId,
-            type,
-            description: description ?? undefined,
-            strength: strength ?? 5,
-          })
-        } else if (!isFromCrew && !isFromCrewMember && isToCrew) {
-          // NPC to Crew relationship - create as crew to NPC (reverse direction)
-          const crewId = toNpcId.replace('crew-', '')
-          await createCrewRelationship.mutateAsync({
-            crewId,
-            toNpcId: fromNpcId,
-            type,
-            description: description ?? undefined,
-            strength: strength ?? 5,
-          })
-        } else if (!isFromCrew && !isFromCrewMember && isToCrewMember) {
-          // NPC to Crew Member relationship - create as crew member to NPC (reverse direction)
-          const crewMemberId = toNpcId.replace('member-', '')
-          await createCrewMemberRelationship.mutateAsync({
-            crewMemberId,
-            toNpcId: fromNpcId,
-            type,
-            description: description ?? undefined,
-            strength: strength ?? 5,
-          })
-        } else if (!isFromCrew && !isFromCrewMember && !isToCrew && !isToCrewMember) {
-          // NPC to NPC relationship
-          await createRelationship.mutateAsync({
-            fromNpcId,
-            toNpcId,
-            type,
-            description: description ?? undefined,
-            strength: strength ?? 5,
-          })
-        } else {
-          console.error('Unsupported relationship type combination')
-        }
-        setShowRelationshipForm(false)
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to create relationship'
-        alert(errorMessage)
-      }
-    }
-  }
-
-  const handleUpdateRelationship = async (relData: {
-    fromNpcId: string
-    toNpcId: string
-    type: string
-    description?: string
-    strength: number
-  }) => {
-    if (editingRelationship) {
-      const relationshipId = editingRelationship.id
-      const updateData = {
-        type: relData.type,
-        description: relData.description,
-        strength: relData.strength,
-      }
-      
-      try {
-        const { type, actualId } = parseRelationshipId(relationshipId)
-        if (type === 'crew') {
-          await updateCrewRelationship.mutateAsync({ id: actualId, data: updateData })
-        } else if (type === 'member') {
-          await updateCrewMemberRelationship.mutateAsync({ id: actualId, data: updateData })
-        } else {
-          await updateRelationship.mutateAsync({ id: actualId, data: updateData })
-        }
-        setShowRelationshipForm(false)
-        setEditingRelationship(null)
-      } catch (error) {
-        console.error('Failed to update relationship:', error)
-      }
-    }
-  }
-
-  const handleDeleteRelationship = async () => {
-    if (editingRelationship) {
-      const relationshipId = editingRelationship.id
-      
-      try {
-        const { type, actualId } = parseRelationshipId(relationshipId)
-        if (type === 'crew') {
-          await deleteCrewRelationship.mutateAsync(actualId)
-        } else if (type === 'member') {
-          await deleteCrewMemberRelationship.mutateAsync(actualId)
-        } else {
-          await deleteRelationship.mutateAsync(actualId)
-        }
-        setShowRelationshipForm(false)
-        setEditingRelationship(null)
-      } catch (error) {
-        console.error('Failed to delete relationship:', error)
-      }
-    }
-  }
-
-  const handleDeleteConnectionFromPanel = async (relationshipId: string) => {
-    if (!confirm('Are you sure you want to delete this relationship?')) {
-      return
-    }
-    try {
-      const { type, actualId } = parseRelationshipId(relationshipId)
-      if (type === 'crew') {
-        await deleteCrewRelationship.mutateAsync(actualId)
-      } else if (type === 'member') {
-        await deleteCrewMemberRelationship.mutateAsync(actualId)
-      } else {
-        await deleteRelationship.mutateAsync(actualId)
-      }
-    } catch (error) {
-      console.error('Failed to delete relationship:', error)
-      alert('Failed to delete relationship. Please try again.')
-    }
-  }
-
-  // Handle editing relationship from panel
-  const handleEditRelationshipFromPanel = (relationshipId: string) => {
-    // Find the relationship in the graph data
-    const extendedData = graphData as GraphData & { 
-      crewLinks?: GraphLink[]
-      memberLinks?: GraphLink[]
-    }
-    
-    const allLinks = [
-      ...graphData!.links,
-      ...(extendedData.crewLinks || []),
-      ...(extendedData.memberLinks || [])
-    ]
-    
-    const link = allLinks.find(l => l.id === relationshipId)
-    if (link) {
-      setEditingRelationship(link)
-      setPreselectedFromId(null)
-      setShowRelationshipForm(true)
-    }
-  }
-
-  // Compose data for board
-  const data = useMemo(() => {
-    const emptyGraphData = { nodes: [] as GraphNode[], links: [] as GraphLink[] }
-    if (!graphData) return emptyGraphData
-    
-    const extendedData = graphData as typeof graphData & {
-      crews?: GraphNode[]
-      crewMemberNodes?: GraphNode[]
-      crewLinks?: GraphLink[]
-      memberLinks?: (GraphLink & { crewId?: string })[]
-    }
-    
-    let allNodes: GraphNode[] = filters.showCrewMembersOnly 
-      ? [] 
-      : graphData.nodes.map(n => ({ ...n, nodeType: n.nodeType || 'npc' as const }))
-    
-    let allLinks: GraphLink[] = filters.showCrewMembersOnly
-      ? []
-      : graphData.links.map(l => ({
-          ...l,
-          source: typeof l.source === 'object' ? (l.source as { id: string }).id : l.source,
-          target: typeof l.target === 'object' ? (l.target as { id: string }).id : l.target,
-        }))
-    
-    if (!filters.showNpcsOnly) {
-      if (filters.crewViewMode === 'collapsed') {
-        if (extendedData.crews) {
-          allNodes = [...allNodes, ...extendedData.crews.map(c => ({ ...c, nodeType: 'crew' as const }))]
-        }
-        if (extendedData.crewLinks) {
-          allLinks = [...allLinks, ...extendedData.crewLinks]
-        }
-      } else {
-        if (extendedData.crewMemberNodes) {
-          allNodes = [...allNodes, ...extendedData.crewMemberNodes.map(m => ({ ...m, nodeType: 'crew-member' as const }))]
-        }
-        if (extendedData.memberLinks) {
-          allLinks = [...allLinks, ...extendedData.memberLinks]
-        }
-      }
-    }
-    
-    return {
-      nodes: allNodes,
-      links: allLinks,
-    }
-  }, [graphData, filters.crewViewMode, filters.showCrewMembersOnly, filters.showNpcsOnly])
-
-  // All nodes for relationship form (includes all regardless of view mode)
-  const allNodesForForm = useMemo(() => {
-    if (!graphData) return []
-    
-    const extendedData = graphData as typeof graphData & {
-      crews?: GraphNode[]
-      crewMemberNodes?: GraphNode[]
-    }
-    
-    let nodes: GraphNode[] = graphData.nodes.map(n => ({ ...n, nodeType: n.nodeType || 'npc' as const }))
-    
-    if (extendedData.crews) {
-      nodes = [...nodes, ...extendedData.crews.map(c => ({ ...c, nodeType: 'crew' as const }))]
-    }
-    if (extendedData.crewMemberNodes) {
-      nodes = [...nodes, ...extendedData.crewMemberNodes.map(m => ({ ...m, nodeType: 'crew-member' as const }))]
-    }
-    
-    return nodes
-  }, [graphData])
 
   if (isLoading) {
     return (
-      <div className="detective-loading">
-        <div className="loading-content">
-          <div className="magnifying-glass">🔍</div>
-          <p>Gathering evidence...</p>
-        </div>
+      <div className="min-h-screen bg-[#2d4a3e] flex items-center justify-center">
+        <div className="text-white text-xl">Loading campaign...</div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="detective-error">
-        <div className="error-content">
-          <p className="error-text">Case file corrupted!</p>
-        </div>
+      <div className="min-h-screen bg-[#2d4a3e] flex items-center justify-center">
+        <div className="text-red-400 text-xl">Error loading campaign</div>
       </div>
     )
   }
 
   return (
-    <div className={`detective-page ${isMobile ? 'is-mobile' : ''}`}>
-      <div className="wood-frame">
-        {/* Top toolbar */}
-        <div className={`detective-toolbar ${isMobile ? 'mobile-toolbar' : ''}`}>
-          <div className="toolbar-left">
-            <Link href="/" className="nav-link">
-              {isMobile ? '←' : '← Campaigns'}
-            </Link>
-            <h1 className="toolbar-title">
-              {isMobile ? (campaign?.name || 'Board') : `📋 ${campaign?.name || 'Case Board'}`}
-            </h1>
-          </div>
-          {!isMobile && (
-            <div className="toolbar-center">
-              <span className="stats-badge">
-                {data.nodes.length} Characters • {data.links.length} Connections
-              </span>
-            </div>
-          )}
-          {!isMobile && (
-            <div className="toolbar-right">
-              <button
-                onClick={() => setShowLegend(!showLegend)}
-                className="toolbar-btn"
-              >
-                🏷️ Legend
-              </button>
-              <select
-                value={userRole}
-                onChange={e => setUserRole(e.target.value as 'viewer' | 'editor' | 'admin')}
-                className="role-select"
-              >
-                <option value="viewer">👁️ Viewer</option>
-                <option value="editor">✏️ Editor</option>
-                <option value="admin">👑 Admin</option>
-              </select>
-            </div>
-          )}
+    <div className="min-h-screen bg-[#2d4a3e] relative overflow-hidden">
+      {/* Header */}
+      <header className="bg-[#1a2f27] border-b border-[#3d5a4e] px-4 py-3 flex items-center justify-between relative z-50">
+        <div className="flex items-center gap-4">
+          <Link href="/" className="text-white hover:text-gray-300 transition-colors">
+            ← {!isMobile && 'Back'}
+          </Link>
+          <h1 className={`font-bold text-white ${isMobile ? 'text-base' : 'text-xl'}`}>{campaign?.name || 'Campaign'}</h1>
         </div>
-
-        {/* Mobile toolbar icons - second row */}
-        {isMobile && (
-          <div className="mobile-toolbar-icons">
-            <button
-              onClick={() => toggleMobilePanel('filters')}
-              className={`toolbar-btn mobile-btn-labeled ${showMobileFilters ? 'active' : ''}`}
-              title="Search & Filter"
-            >
-              <span className="btn-icon">🔍</span>
-              <span className="btn-label">Search</span>
-            </button>
-            {canEdit && (
+        
+        {/* View Toggle - Center (Desktop only) */}
+        {!isMobile && (
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 bg-[#2d4a3e] rounded-lg p-1">
               <button
-                onClick={() => toggleMobilePanel('menu')}
-                className={`toolbar-btn mobile-btn-labeled ${showMobileMenu ? 'active' : ''}`}
-                title="Add"
+                onClick={() => setFilters(prev => ({ ...prev, showCharactersOnly: false, showOrganisationsOnly: false }))}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  !filters.showCharactersOnly && !filters.showOrganisationsOnly
+                    ? 'bg-[#4a7c59] text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
               >
-                <span className="btn-icon">＋</span>
-                <span className="btn-label">Add</span>
+                All
+              </button>
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, showCharactersOnly: true, showOrganisationsOnly: false }))}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  filters.showCharactersOnly
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                👤 Characters
+              </button>
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, showOrganisationsOnly: true, showCharactersOnly: false }))}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  filters.showOrganisationsOnly
+                    ? 'bg-purple-600 text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                🏛️ Organisations
+              </button>
+            </div>
+            
+            {/* Multi-select Apply/Clear buttons */}
+            {multiSelectedNodeIds.size >= 2 && !isMultiSelectFilterActive && (
+              <button
+                onClick={() => {
+                  setIsMultiSelectFilterActive(true)
+                  setSelectedNode(null) // Close the details panel
+                }}
+                className="px-4 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium animate-pulse"
+              >
+                Apply ({multiSelectedNodeIds.size} selected)
               </button>
             )}
-            <button
-              onClick={() => toggleMobilePanel('legend')}
-              className={`toolbar-btn mobile-btn-labeled ${showMobileLegend ? 'active' : ''}`}
-              title="Legend"
-            >
-              <span className="btn-icon">🏷️</span>
-              <span className="btn-label">Legend</span>
-            </button>
-            <button
-              onClick={() => toggleMobilePanel('roles')}
-              className={`toolbar-btn mobile-btn-labeled ${showMobileRoles ? 'active' : ''}`}
-              title="Role"
-            >
-              <span className="btn-icon">{userRole === 'viewer' ? '👁️' : userRole === 'editor' ? '✏️' : '👑'}</span>
-              <span className="btn-label">Role</span>
-            </button>
+            {isMultiSelectFilterActive && (
+              <button
+                onClick={() => {
+                  setIsMultiSelectFilterActive(false)
+                  setMultiSelectedNodeIds(new Set())
+                }}
+                className="px-4 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
+              >
+                ✕ Clear Filter
+              </button>
+            )}
           </div>
         )}
-
-        {/* Mobile action menu */}
-        {isMobile && showMobileMenu && canEdit && (
-          <div className="mobile-action-menu">
+        
+        {/* Right side actions */}
+        <div className="flex items-center gap-2">
+          {/* Mobile menu button */}
+          {isMobile && (
             <button
-              onClick={() => {
-                setEditingNpc(null)
-                setShowNpcForm(true)
-                setShowMobileMenu(false)
-              }}
-              className="mobile-action-btn add-npc"
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="px-3 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-500 text-sm"
             >
-              📌 Add Character
+              ☰
             </button>
-            <button
-              onClick={() => {
-                setEditingRelationship(null)
-                setPreselectedFromId(null)
-                setShowRelationshipForm(true)
-                setShowMobileMenu(false)
-              }}
-              className="mobile-action-btn add-relation"
-            >
-              🧵 Add Connection
-            </button>
-          </div>
-        )}
-
-        {/* Mobile legend panel */}
-        {isMobile && showMobileLegend && (
-          <div className="mobile-legend-panel">
-            <DetectiveLegend />
-          </div>
-        )}
-
-        {/* Mobile role selector */}
-        {isMobile && showMobileRoles && (
-          <div className="mobile-role-menu">
-            <button
-              onClick={() => { setUserRole('viewer'); setShowMobileRoles(false) }}
-              className={`mobile-role-btn ${userRole === 'viewer' ? 'active' : ''}`}
-            >
-              👁️ Viewer
-            </button>
-            <button
-              onClick={() => { setUserRole('editor'); setShowMobileRoles(false) }}
-              className={`mobile-role-btn ${userRole === 'editor' ? 'active' : ''}`}
-            >
-              ✏️ Editor
-            </button>
-            <button
-              onClick={() => { setUserRole('admin'); setShowMobileRoles(false) }}
-              className={`mobile-role-btn ${userRole === 'admin' ? 'active' : ''}`}
-            >
-              👑 Admin
-            </button>
-          </div>
-        )}
-
-        {/* Mobile filter panel */}
-        {isMobile && showMobileFilters && (
-          <div className="mobile-filter-panel">
-            <DetectiveFilterPanel
-              data={data}
-              filters={filters}
-              onFiltersChange={setFilters}
-            />
-          </div>
-        )}
-
-        {/* Main content */}
-        <div className="detective-content">
-          {/* Left sidebar - filters & actions (desktop only) */}
+          )}
           {!isMobile && (
-            <div className="detective-sidebar">
-              {canEdit && (
-                <div className="action-buttons">
-                  <button
-                    onClick={() => {
-                      setEditingNpc(null)
-                      setShowNpcForm(true)
-                    }}
-                    className="action-btn add-npc"
-                  >
-                    📌 Add Character
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditingRelationship(null)
-                      setPreselectedFromId(null)
-                      setShowRelationshipForm(true)
-                    }}
-                    className="action-btn add-relation"
-                  >
-                    🧵 Add Connection
-                  </button>
-                </div>
-              )}
+            <button
+              onClick={() => setShowLegend(!showLegend)}
+              className="px-3 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-500 text-sm"
+            >
+              Legend
+            </button>
+          )}
+        </div>
+      </header>
 
-              <DetectiveFilterPanel
-                data={data}
-                filters={filters}
-                onFiltersChange={setFilters}
-              />
+      {/* Mobile Menu Dropdown */}
+      {isMobile && showMobileMenu && (
+        <div className="absolute top-14 right-4 z-[100] bg-gray-800 rounded-lg shadow-xl p-4 min-w-[200px]">
+          <div className="space-y-3">
+            {/* View Toggle */}
+            <div className="space-y-2">
+              <p className="text-gray-400 text-xs uppercase tracking-wide">View</p>
+              <div className="flex flex-col gap-1">
+                <button
+                  onClick={() => {
+                    setFilters(prev => ({ ...prev, showCharactersOnly: false, showOrganisationsOnly: false }))
+                    setShowMobileMenu(false)
+                  }}
+                  className={`px-3 py-2 rounded-md text-sm text-left ${
+                    !filters.showCharactersOnly && !filters.showOrganisationsOnly
+                      ? 'bg-[#4a7c59] text-white'
+                      : 'bg-gray-700 text-gray-300'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => {
+                    setFilters(prev => ({ ...prev, showCharactersOnly: true, showOrganisationsOnly: false }))
+                    setShowMobileMenu(false)
+                  }}
+                  className={`px-3 py-2 rounded-md text-sm text-left ${
+                    filters.showCharactersOnly
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300'
+                  }`}
+                >
+                  👤 Characters
+                </button>
+                <button
+                  onClick={() => {
+                    setFilters(prev => ({ ...prev, showOrganisationsOnly: true, showCharactersOnly: false }))
+                    setShowMobileMenu(false)
+                  }}
+                  className={`px-3 py-2 rounded-md text-sm text-left ${
+                    filters.showOrganisationsOnly
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700 text-gray-300'
+                  }`}
+                >
+                  🏛️ Organisations
+                </button>
+              </div>
+            </div>
+            
+            {/* Actions */}
+            {canEdit && (
+              <div className="space-y-2 border-t border-gray-700 pt-3">
+                <p className="text-gray-400 text-xs uppercase tracking-wide">Create</p>
+                <button
+                  onClick={() => {
+                    setShowCharacterForm(true)
+                    setShowMobileMenu(false)
+                  }}
+                  className="w-full px-3 py-2 bg-green-600 text-white rounded-md text-sm text-left"
+                >
+                  + Character
+                </button>
+                <button
+                  onClick={() => {
+                    setShowOrganisationForm(true)
+                    setShowMobileMenu(false)
+                  }}
+                  className="w-full px-3 py-2 bg-purple-600 text-white rounded-md text-sm text-left"
+                >
+                  + Organisation
+                </button>
+              </div>
+            )}
+            
+            {/* Other */}
+            <div className="space-y-2 border-t border-gray-700 pt-3">
+              <button
+                onClick={() => {
+                  setShowLegend(true)
+                  setShowMobileMenu(false)
+                }}
+                className="w-full px-3 py-2 bg-gray-700 text-white rounded-md text-sm text-left"
+              >
+                📊 Legend
+              </button>
+              <button
+                onClick={() => {
+                  setShowMobileFilters(!showMobileFilters)
+                  setShowMobileMenu(false)
+                }}
+                className="w-full px-3 py-2 bg-gray-700 text-white rounded-md text-sm text-left"
+              >
+                🔍 Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Filters Panel */}
+      {isMobile && showMobileFilters && (
+        <div className="absolute top-14 left-0 right-0 z-[99] bg-gray-800 border-b border-gray-700 p-3">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-white font-bold text-sm">Filters</h3>
+            <button
+              onClick={() => setShowMobileFilters(false)}
+              className="text-gray-400 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+          <DetectiveFilterPanel
+            filters={filters}
+            onFiltersChange={setFilters}
+            graphData={graphData || { nodes: [], links: [] }}
+            isMobile={true}
+          />
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="flex h-[calc(100vh-60px)]">
+        {/* Filter Panel */}
+        {!isMobile && (
+          <DetectiveFilterPanel
+            filters={filters}
+            onFiltersChange={setFilters}
+            graphData={graphData || { nodes: [], links: [] }}
+            onCreateCharacter={canEdit ? () => setShowCharacterForm(true) : undefined}
+            onCreateOrganisation={canEdit ? () => setShowOrganisationForm(true) : undefined}
+          />
+        )}
+
+        {/* Detective Board */}
+        <div className="flex-1 relative">
+          <DetectiveBoard
+            data={graphData || { nodes: [], links: [] }}
+            filters={filters}
+            onNodeClick={handleNodeClick}
+            selectedNodeId={selectedNode?.id}
+            multiSelectedNodeIds={multiSelectedNodeIds}
+            onMultiSelectChange={setMultiSelectedNodeIds}
+            isMultiSelectFilterActive={isMultiSelectFilterActive}
+          />
+          
+          {/* Multi-select hint overlay */}
+          {multiSelectedNodeIds.size > 0 && multiSelectedNodeIds.size < 2 && !isMultiSelectFilterActive && (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-lg text-sm">
+              {isMobile 
+                ? `Long-press to select more nodes (${multiSelectedNodeIds.size}/2 minimum)`
+                : `Hold Ctrl and click to select more nodes (${multiSelectedNodeIds.size}/2 minimum)`
+              }
             </div>
           )}
-
-          {/* Main board area */}
-          <div className="detective-board-container">
-            <DetectiveBoard
-              data={data}
-              filters={filters}
-              onNodeClick={handleNodeClick}
-              selectedNodeId={selectedNode?.id ?? null}
-            />
-          </div>
-
-          {/* Right panel - selected NPC details (desktop: sidebar, mobile: bottom sheet) */}
-          {selectedNode && (
-            <>
-              {/* Mobile backdrop - click to close */}
-              {isMobile && (
-                <div 
-                  className="mobile-sheet-backdrop"
-                  onClick={() => {
-                    setSelectedNode(null)
-                    setParentCrewNode(null)
-                  }}
-                />
-              )}
-              <div className={`detective-detail-panel ${isMobile ? 'mobile-sheet' : ''}`}>
-                <DetectiveNpcPanel
-                  node={selectedNode}
-                  relationships={nodeRelationships}
-                  onClose={() => {
-                    setSelectedNode(null)
-                    setParentCrewNode(null)
-                  }}
-                  onEdit={handleEditNpc}
-                  onAddConnection={handleAddConnectionFromNode}
-                  onDeleteConnection={handleDeleteConnectionFromPanel}
-                  onEditRelationship={handleEditRelationshipFromPanel}
-                  onMemberClick={handleMemberClick}
-                  onBackToCrew={handleBackToCrew}
-                  parentCrew={parentCrewNode}
-                  canEdit={canEdit}
-                  isMobile={isMobile}
-                />
-              </div>
-            </>
+          
+          {/* Mobile multi-select Apply/Clear buttons */}
+          {isMobile && multiSelectedNodeIds.size >= 2 && !isMultiSelectFilterActive && (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+              <button
+                onClick={() => {
+                  setIsMultiSelectFilterActive(true)
+                  setSelectedNode(null)
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium shadow-lg animate-pulse"
+              >
+                Apply ({multiSelectedNodeIds.size} selected)
+              </button>
+            </div>
+          )}
+          {isMobile && isMultiSelectFilterActive && (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+              <button
+                onClick={() => {
+                  setIsMultiSelectFilterActive(false)
+                  setMultiSelectedNodeIds(new Set())
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium shadow-lg"
+              >
+                ✕ Clear Filter
+              </button>
+            </div>
           )}
         </div>
 
-        {/* Legend popup */}
-        {showLegend && (
-          <div className="legend-overlay" onClick={() => setShowLegend(false)}>
-            <div className="legend-popup" onClick={e => e.stopPropagation()}>
-              <DetectiveLegend />
-            </div>
-          </div>
+        {/* Node Panel - conditionally rendered inline on desktop */}
+        {!isMobile && selectedNode && (
+          <DetectiveNodePanel
+            node={selectedNode}
+            relationships={nodeRelationships}
+            onClose={() => {
+              setSelectedNode(null)
+              setParentOrg(null)
+            }}
+            onEdit={canEdit ? handleEditNode : undefined}
+            onDelete={canEdit ? handleDeleteNode : undefined}
+            onAddRelationship={canEdit ? handleAddRelationship : undefined}
+            onEditRelationship={canEdit ? (link: GraphLink) => setEditingRelationship(link) : undefined}
+            onMemberClick={(member: GraphNode) => {
+              // Remember the current org before navigating to member
+              if (selectedNode.entityType === 'organisation') {
+                setParentOrg(selectedNode)
+              }
+              setSelectedNode(member)
+            }}
+            parentOrg={parentOrg}
+            onBackToOrg={() => {
+              if (parentOrg) {
+                setSelectedNode(parentOrg)
+                setParentOrg(null)
+              }
+            }}
+          />
         )}
       </div>
 
-      {/* Modals */}
-      {showNpcForm && (
-        <NpcForm
-          npc={editingNpc}
-          onSubmit={editingNpc ? handleUpdateNpc : handleCreateNpc}
-          onSubmitCrewMember={handleCreateCrewMember}
-          onCancel={() => {
-            setShowNpcForm(false)
-            setEditingNpc(null)
-            setEditingCrewMemberId(null)
-          }}
-          onDelete={editingNpc ? handleDeleteNpc : undefined}
-          crews={crews}
-          allowCharacterTypeSelection={!editingNpc}
+      {/* Mobile Bottom Sheet Panel */}
+      {isMobile && selectedNode && (
+        <div className="fixed bottom-0 left-0 right-0 z-[200] bg-[#1a2f27] border-t border-[#3d5a4e] max-h-[50vh] rounded-t-xl shadow-2xl animate-slide-up flex flex-col">
+          {/* Fixed header */}
+          <div className="flex-shrink-0 bg-[#1a2f27] border-b border-[#3d5a4e] p-3 flex items-center justify-between rounded-t-xl">
+            <div className="flex items-center gap-2">
+              {parentOrg && (
+                <button
+                  onClick={() => {
+                    if (parentOrg) {
+                      setSelectedNode(parentOrg)
+                      setParentOrg(null)
+                    }
+                  }}
+                  className="text-purple-300 hover:text-purple-200 text-sm"
+                >
+                  ←
+                </button>
+              )}
+              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                selectedNode.entityType === 'organisation' ? 'bg-purple-600 text-white' : 'bg-blue-600 text-white'
+              }`}>
+                {selectedNode.entityType === 'organisation' ? '🏛️ ORG' : '👤 CHAR'}
+              </span>
+              <span className="text-white font-bold text-sm truncate max-w-[150px]">{selectedNode.name}</span>
+              {selectedNode.status === 'dead' && (
+                <span className="text-red-400 text-xs font-bold">✕ DECEASED</span>
+              )}
+            </div>
+            <button 
+              onClick={() => {
+                setSelectedNode(null)
+                setParentOrg(null)
+              }} 
+              className="text-gray-400 hover:text-white text-lg"
+            >
+              ✕
+            </button>
+          </div>
+          
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto p-3">
+            {/* Quick info row */}
+            <div className="flex gap-3 mb-3">
+              {selectedNode.imageUrl && (
+                <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#8b7355] flex-shrink-0">
+                  <img
+                    src={selectedNode.imageUrl}
+                    alt={selectedNode.name}
+                    className="w-full h-full object-cover"
+                    style={selectedNode.imageCrop ? {
+                      transform: `scale(${selectedNode.imageCrop.zoom}) translate(${selectedNode.imageCrop.offsetX / selectedNode.imageCrop.zoom}%, ${selectedNode.imageCrop.offsetY / selectedNode.imageCrop.zoom}%)`,
+                      transformOrigin: 'center',
+                    } : undefined}
+                  />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                {selectedNode.title && (
+                  <p className="text-[#b8860b] text-sm italic truncate">{selectedNode.title}</p>
+                )}
+                {selectedNode.description && (
+                  <p className="text-gray-300 text-xs line-clamp-2">{selectedNode.description}</p>
+                )}
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {selectedNode.faction && (
+                    <span className="text-xs bg-green-600/30 text-green-300 px-1.5 py-0.5 rounded">{selectedNode.faction}</span>
+                  )}
+                  {selectedNode.location && (
+                    <span className="text-xs bg-blue-600/30 text-blue-300 px-1.5 py-0.5 rounded">📍 {selectedNode.location}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Connections - one per row, clickable */}
+            {(nodeRelationships.from.length > 0 || nodeRelationships.to.length > 0) && (
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-bold text-[#b8860b]">Connections ({nodeRelationships.from.length + nodeRelationships.to.length})</h4>
+                  {canEdit && (
+                    <button
+                      onClick={handleAddRelationship}
+                      className="text-xs bg-green-600/30 text-green-300 px-2 py-0.5 rounded hover:bg-green-600/50"
+                    >
+                      + Add
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  {[...nodeRelationships.from, ...nodeRelationships.to].map((rel, idx) => {
+                    const otherNode = 'targetNode' in rel ? rel.targetNode : rel.sourceNode
+                    const isOutgoing = 'targetNode' in rel
+                    const relationshipColor = getRelationshipColor(rel.type, rel.strength || 3)
+                    return otherNode ? (
+                      <div 
+                        key={rel.id || idx} 
+                        className="flex items-center gap-2 p-2 bg-[#2d4a3e] rounded-lg"
+                      >
+                        {/* Color indicator */}
+                        <div 
+                          className="w-2 h-8 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: relationshipColor }}
+                        />
+                        {/* Connection info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-400 text-xs">{isOutgoing ? '→' : '←'}</span>
+                            <button
+                              onClick={() => {
+                                const targetNode = graphData?.nodes.find(n => n.id === otherNode.id)
+                                if (targetNode) {
+                                  if (selectedNode.entityType === 'organisation') {
+                                    setParentOrg(selectedNode)
+                                  }
+                                  setSelectedNode(targetNode)
+                                }
+                              }}
+                              className="text-white text-sm font-medium truncate hover:text-[#b8860b]"
+                            >
+                              {otherNode.name}
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span 
+                              className="text-xs px-1.5 py-0.5 rounded"
+                              style={{ 
+                                backgroundColor: `${relationshipColor}30`,
+                                color: relationshipColor 
+                              }}
+                            >
+                              {rel.type}
+                            </span>
+                            {rel.description && (
+                              <span className="text-gray-400 text-xs truncate">{rel.description}</span>
+                            )}
+                          </div>
+                        </div>
+                        {/* Edit/Delete buttons */}
+                        {canEdit && (
+                          <div className="flex gap-1 flex-shrink-0">
+                            <button
+                              onClick={() => setEditingRelationship(rel)}
+                              className="w-7 h-7 bg-blue-600/30 text-blue-300 rounded flex items-center justify-center text-xs hover:bg-blue-600/50"
+                            >
+                              ✏️
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : null
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* No connections message with add button */}
+            {nodeRelationships.from.length === 0 && nodeRelationships.to.length === 0 && (
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-bold text-[#b8860b]">Connections</h4>
+                  {canEdit && (
+                    <button
+                      onClick={handleAddRelationship}
+                      className="text-xs bg-green-600/30 text-green-300 px-2 py-0.5 rounded hover:bg-green-600/50"
+                    >
+                      + Add
+                    </button>
+                  )}
+                </div>
+                <p className="text-gray-500 text-xs italic">No connections yet</p>
+              </div>
+            )}
+
+            {/* Organisation members - one per row */}
+            {selectedNode.entityType === 'organisation' && selectedNode.members && selectedNode.members.length > 0 && (
+              <div className="mb-3">
+                <h4 className="text-xs font-bold text-[#b8860b] mb-2">Members ({selectedNode.members.length})</h4>
+                <div className="space-y-1">
+                  {selectedNode.members.map(member => (
+                    <button
+                      key={member.id}
+                      onClick={() => {
+                        setParentOrg(selectedNode)
+                        setSelectedNode(member as GraphNode)
+                      }}
+                      className="w-full flex items-center gap-2 p-2 bg-purple-600/20 rounded-lg hover:bg-purple-600/30 text-left"
+                    >
+                      {/* Member avatar */}
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-purple-600/30 flex-shrink-0">
+                        {member.imageUrl ? (
+                          <img src={member.imageUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-purple-300 text-xs">
+                            👤
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm font-medium truncate">{member.name}</p>
+                        {member.title && (
+                          <p className="text-purple-300 text-xs truncate">{member.title}</p>
+                        )}
+                      </div>
+                      <span className="text-purple-300 text-sm">→</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Fixed footer actions */}
+          {canEdit && (
+            <div className="flex-shrink-0 border-t border-[#3d5a4e] p-3 bg-[#1a2f27]">
+              <div className="flex gap-2">
+                <button
+                  onClick={handleEditNode}
+                  className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+                >
+                  ✏️ Edit
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Legend */}
+      {showLegend && (
+        <DetectiveLegend 
+          onClose={() => setShowLegend(false)} 
+          organisations={organisations}
         />
       )}
 
+      {/* Character Form Modal */}
+      {showCharacterForm && (
+        <CharacterForm
+          onSubmit={handleCreateCharacter}
+          onSubmitOrgMember={handleCreateOrgMember}
+          onCancel={() => setShowCharacterForm(false)}
+          organisations={organisations}
+          allowCharacterTypeSelection={true}
+          campaignId={campaign?.id}
+        />
+      )}
+
+      {/* Edit Character Form Modal */}
+      {editingCharacter && (
+        <CharacterForm
+          character={editingCharacter}
+          onSubmit={handleUpdateCharacter}
+          onCancel={() => setEditingCharacter(null)}
+          onDelete={handleDeleteCharacter}
+          organisations={organisations}
+          campaignId={campaign?.id}
+          onAddToOrg={async (characterId, orgId) => {
+            await addMember.mutateAsync({ characterId, organisationId: orgId })
+          }}
+          onRemoveFromOrg={async (characterId, orgId) => {
+            await removeMember.mutateAsync({ characterId, organisationId: orgId })
+          }}
+        />
+      )}
+
+      {/* Organisation Form Modal */}
+      {showOrganisationForm && (
+        <OrganisationForm
+          onSubmit={handleCreateOrganisation}
+          onCancel={() => setShowOrganisationForm(false)}
+          campaignId={campaign?.id}
+          existingOrganisations={organisations}
+        />
+      )}
+
+      {/* Edit Organisation Form Modal */}
+      {editingOrganisation && (
+        <OrganisationForm
+          organisation={editingOrganisation}
+          onSubmit={handleUpdateOrganisation}
+          onCancel={() => setEditingOrganisation(null)}
+          onDelete={handleDeleteOrganisation}
+          campaignId={campaign?.id}
+          existingOrganisations={organisations}
+        />
+      )}
+
+      {/* Relationship Form Modal */}
       {showRelationshipForm && (
         <RelationshipForm
-          nodes={allNodesForForm}
-          existingLinks={editingRelationship ? [] : (graphData?.links || [])}
-          relationship={editingRelationship}
-          preselectedFromId={preselectedFromId || undefined}
-          onSubmit={editingRelationship ? handleUpdateRelationship : handleCreateRelationship}
+          nodes={graphData?.nodes || []}
+          existingLinks={graphData?.links || []}
+          preselectedFromId={preselectedFromId}
+          onSubmit={handleCreateRelationship}
           onCancel={() => {
             setShowRelationshipForm(false)
-            setEditingRelationship(null)
             setPreselectedFromId(null)
           }}
-          onDelete={editingRelationship ? handleDeleteRelationship : undefined}
+        />
+      )}
+
+      {/* Edit Relationship Form Modal */}
+      {editingRelationship && (
+        <RelationshipForm
+          nodes={graphData?.nodes || []}
+          existingLinks={graphData?.links || []}
+          relationship={editingRelationship}
+          onSubmit={handleUpdateRelationship}
+          onCancel={() => setEditingRelationship(null)}
+          onDelete={handleDeleteRelationship}
         />
       )}
     </div>

@@ -14,8 +14,16 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+}
+
+/* Custom animations */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
 }
 
 body {
@@ -402,10 +410,37 @@ body:has(.modal-overlay) {
   border: 2px solid var(--card-border);
 }
 
-.remove-image-btn {
+.image-preview-buttons {
   position: absolute;
   top: -8px;
   right: -8px;
+  display: flex;
+  gap: 4px;
+}
+
+.adjust-image-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: #3b82f6;
+  color: white;
+  cursor: pointer;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.adjust-image-btn:hover {
+  transform: scale(1.1);
+}
+
+.remove-image-btn {
+  position: relative;
+  top: 0;
+  right: 0;
   width: 24px;
   height: 24px;
   border-radius: 50%;

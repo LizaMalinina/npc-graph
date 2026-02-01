@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react'
-import { GraphData, GraphNode, FilterState, RELATIONSHIP_COLORS } from '@/types'
+import { GraphData, GraphNode, FilterState, getRelationshipColor } from '@/types'
 import { getPlaceholderAvatar } from '@/lib/utils'
 
 interface DetectiveBoardProps {
@@ -9,6 +9,9 @@ interface DetectiveBoardProps {
   filters: FilterState
   onNodeClick: (node: GraphNode) => void
   selectedNodeId?: string | null
+  multiSelectedNodeIds?: Set<string>
+  onMultiSelectChange?: (nodeIds: Set<string>) => void
+  isMultiSelectFilterActive?: boolean
 }
 
 // Get polaroid-style rotation for each node
@@ -55,6 +58,9 @@ export default function DetectiveBoard({
   filters,
   onNodeClick,
   selectedNodeId: externalSelectedNodeId,
+  multiSelectedNodeIds = new Set(),
+  onMultiSelectChange,
+  isMultiSelectFilterActive = false,
 }: DetectiveBoardProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [positions, setPositions] = useState<Map<string, { x: number; y: number }>>(new Map())
@@ -80,15 +86,25 @@ export default function DetectiveBoard({
   const didDrag = useRef(false) // Track if actual dragging happened
   const DRAG_THRESHOLD = 5 // pixels - if mouse moves less than this, it's a click
   const TOUCH_TAP_THRESHOLD = 25 // pixels - higher threshold for touch (less precise)
+  const LONG_PRESS_DURATION = 400 // ms - duration for long press detection
   
   // Touch state for pinch zoom and touch interactions
   const lastTouchDistance = useRef<number | null>(null)
   const touchStartPos = useRef<{ x: number; y: number } | null>(null)
   const touchNodeId = useRef<string | null>(null)
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
 
   // Filter nodes and links
   const { filteredNodes, filteredLinks } = useMemo(() => {
     let filteredNodes = [...data.nodes]
+
+    // Apply entity type filters (Characters Only / Organisations Only)
+    if (filters.showCharactersOnly) {
+      filteredNodes = filteredNodes.filter(node => node.entityType === 'character')
+    }
+    if (filters.showOrganisationsOnly) {
+      filteredNodes = filteredNodes.filter(node => node.entityType === 'organisation')
+    }
 
     // Apply search filter
     if (filters.searchQuery) {
@@ -138,8 +154,19 @@ export default function DetectiveBoard({
       )
     }
 
+    // Apply multi-select filter ONLY when filter is active (Apply button pressed)
+    // Otherwise, just keep all nodes visible (will be faded based on selection)
+    if (isMultiSelectFilterActive && multiSelectedNodeIds.size >= 2) {
+      filteredNodes = filteredNodes.filter(node => multiSelectedNodeIds.has(node.id))
+      filteredLinks = filteredLinks.filter(link => {
+        const sourceId = typeof link.source === 'object' ? (link.source as { id: string }).id : link.source
+        const targetId = typeof link.target === 'object' ? (link.target as { id: string }).id : link.target
+        return multiSelectedNodeIds.has(sourceId) && multiSelectedNodeIds.has(targetId)
+      })
+    }
+
     return { filteredNodes, filteredLinks, nodeIds }
-  }, [data, filters])
+  }, [data, filters, multiSelectedNodeIds, isMultiSelectFilterActive])
 
   // Update dimensions on resize
   useEffect(() => {
@@ -191,16 +218,11 @@ export default function DetectiveBoard({
     const centerX = dimensions.width / 2
     const centerY = dimensions.height / 2
     const outerRadius = Math.min(dimensions.width, dimensions.height) * 0.35
-    const innerRadius = Math.min(dimensions.width, dimensions.height) * 0.18
+    const orgRadius = Math.min(dimensions.width, dimensions.height) * 0.15
 
-    // Find the node to center: prioritize crew nodes, then player group nodes
-    const crewNode = filteredNodes.find(n => n.nodeType === 'crew')
-    const playerGroupNode = filteredNodes.find(n => 
-      n.name.toLowerCase().includes('player') || 
-      n.name.toLowerCase().includes('group') ||
-      n.name.toLowerCase().includes('party')
-    )
-    const centerNodeId = crewNode?.id || playerGroupNode?.id
+    // Separate organisations from characters
+    const orgNodes = filteredNodes.filter(n => n.entityType === 'organisation')
+    const characterNodes = filteredNodes.filter(n => n.entityType === 'character')
     
     // Use functional update to avoid stale closure issues
     setPositions(prevPositions => {
@@ -214,37 +236,30 @@ export default function DetectiveBoard({
 
       const newPositions = new Map<string, { x: number; y: number }>(prevPositions)
       
-      // Separate crew members from other nodes
-      const crewMemberNodes = nodesWithoutPositions.filter(n => n.nodeType === 'crew-member')
-      const otherNodes = nodesWithoutPositions.filter(n => 
-        n.nodeType !== 'crew-member' && n.nodeType !== 'crew' && n.id !== centerNodeId
-      )
+      // Filter for nodes that need positioning
+      const orgsToPosition = orgNodes.filter(n => !prevPositions.has(n.id))
+      const charsToPosition = characterNodes.filter(n => !prevPositions.has(n.id))
       
-      // Position crew/center nodes in the center
-      nodesWithoutPositions.forEach(node => {
-        if ((node.nodeType === 'crew' || node.id === centerNodeId) && !newPositions.has(node.id)) {
-          newPositions.set(node.id, { x: centerX, y: centerY })
-        }
-      })
-      
-      // Position crew members in inner circle
-      crewMemberNodes.forEach((node, index) => {
-        if (!newPositions.has(node.id)) {
-          const angle = (2 * Math.PI * index) / crewMemberNodes.length - Math.PI / 2
-          const x = centerX + innerRadius * Math.cos(angle)
-          const y = centerY + innerRadius * Math.sin(angle)
+      // Position organisation nodes in a cluster near center (if multiple)
+      if (orgsToPosition.length === 1) {
+        // Single org goes in center
+        newPositions.set(orgsToPosition[0].id, { x: centerX, y: centerY })
+      } else {
+        // Multiple orgs go in a small circle near center
+        orgsToPosition.forEach((node, index) => {
+          const angle = (2 * Math.PI * index) / orgsToPosition.length - Math.PI / 2
+          const x = centerX + orgRadius * Math.cos(angle)
+          const y = centerY + orgRadius * Math.sin(angle)
           newPositions.set(node.id, { x, y })
-        }
-      })
+        })
+      }
       
-      // Position other nodes (NPCs) in outer circle
-      otherNodes.forEach((node, index) => {
-        if (!newPositions.has(node.id)) {
-          const angle = (2 * Math.PI * index) / otherNodes.length - Math.PI / 2
-          const x = centerX + outerRadius * Math.cos(angle)
-          const y = centerY + outerRadius * Math.sin(angle)
-          newPositions.set(node.id, { x, y })
-        }
+      // Position character nodes in outer circle
+      charsToPosition.forEach((node, index) => {
+        const angle = (2 * Math.PI * index) / Math.max(charsToPosition.length, 1) - Math.PI / 2
+        const x = centerX + outerRadius * Math.cos(angle)
+        const y = centerY + outerRadius * Math.sin(angle)
+        newPositions.set(node.id, { x, y })
       })
 
       return newPositions
@@ -313,6 +328,7 @@ export default function DetectiveBoard({
   const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
     e.preventDefault()
     e.stopPropagation()
+    didDrag.current = false // Reset drag tracking
     mouseDownPos.current = { x: e.clientX, y: e.clientY }
     const pos = positions.get(nodeId)
     if (pos) {
@@ -328,26 +344,34 @@ export default function DetectiveBoard({
     }
   }, [positions, zoom, pan])
 
-  // Handle pan start - ONLY Ctrl+click, otherwise deselect
+  // Handle pan start - left click on background or middle mouse button for panning
   const handleBackgroundMouseDown = useCallback((e: React.MouseEvent) => {
-    // Only pan with Ctrl+left click
-    if (e.button === 0 && e.ctrlKey) {
+    // Pan with middle mouse button OR left click on background (not Ctrl - that's for multi-select)
+    if (e.button === 1 || (e.button === 0 && !e.ctrlKey && !e.metaKey)) {
       e.preventDefault()
       setIsPanning(true)
       setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y })
-    } else if (e.button === 0) {
-      // Regular click on background - deselect
+      // Also deselect when clicking on background
       setSelectedNodeId(null)
     }
   }, [pan])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    // Track if we're dragging (mouse moved enough)
+    if (mouseDownPos.current) {
+      const dx = Math.abs(e.clientX - mouseDownPos.current.x)
+      const dy = Math.abs(e.clientY - mouseDownPos.current.y)
+      if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
+        didDrag.current = true
+      }
+    }
+    
     if (isPanning) {
       setPan({
         x: e.clientX - panStart.x,
         y: e.clientY - panStart.y
       })
-    } else if (draggingNode) {
+    } else if (draggingNode && didDrag.current) {
       const rect = containerRef.current?.getBoundingClientRect()
       if (rect) {
         const newX = (e.clientX - rect.left - pan.x) / zoom - dragOffset.x
@@ -361,25 +385,12 @@ export default function DetectiveBoard({
     }
   }, [isPanning, panStart, draggingNode, dragOffset, zoom, pan])
 
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
-    // Check if this was a click (minimal mouse movement) vs a drag
-    const wasClick = mouseDownPos.current && 
-      Math.abs(e.clientX - mouseDownPos.current.x) < DRAG_THRESHOLD &&
-      Math.abs(e.clientY - mouseDownPos.current.y) < DRAG_THRESHOLD
-    
-    // If we were on a node and didn't drag much, treat it as a click
-    if (draggingNode && wasClick) {
-      const node = filteredNodes.find(n => n.id === draggingNode)
-      if (node) {
-        setSelectedNodeId(node.id)
-        onNodeClick(node)
-      }
-    }
-    
+  const handleMouseUp = useCallback(() => {
+    // Just clean up - click handling is done in onClick handler
     mouseDownPos.current = null
     setDraggingNode(null)
     setIsPanning(false)
-  }, [draggingNode, filteredNodes, onNodeClick])
+  }, [])
 
   // Handle node click - only used for direct clicks without drag
   const handleNodeClick = useCallback((e: React.MouseEvent, node: GraphNode) => {
@@ -390,6 +401,12 @@ export default function DetectiveBoard({
   // Touch handlers for mobile support
   const handleTouchStart = useCallback((e: React.TouchEvent, nodeId?: string) => {
     didDrag.current = false // Reset drag tracking
+    
+    // Clear any existing long press timer
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
     
     if (e.touches.length === 2) {
       // Pinch zoom - calculate initial distance between fingers
@@ -402,7 +419,7 @@ export default function DetectiveBoard({
       touchStartPos.current = { x: touch.clientX, y: touch.clientY }
       
       if (nodeId) {
-        // Touch on a node - prepare for drag
+        // Touch on a node - prepare for drag and long press
         touchNodeId.current = nodeId
         const pos = positions.get(nodeId)
         if (pos) {
@@ -415,17 +432,45 @@ export default function DetectiveBoard({
             setDraggingNode(nodeId)
           }
         }
+        
+        // Set up long press timer for multi-select
+        longPressTimer.current = setTimeout(() => {
+          if (!didDrag.current && touchNodeId.current && onMultiSelectChange) {
+            // Long press detected - toggle multi-select
+            const node = filteredNodes.find(n => n.id === touchNodeId.current)
+            if (node) {
+              const newSet = new Set(multiSelectedNodeIds)
+              if (newSet.has(node.id)) {
+                newSet.delete(node.id)
+              } else {
+                newSet.add(node.id)
+              }
+              onMultiSelectChange(newSet)
+              // Vibrate for feedback if available
+              if (navigator.vibrate) {
+                navigator.vibrate(50)
+              }
+            }
+            // Prevent regular tap from also triggering
+            touchNodeId.current = null
+          }
+          longPressTimer.current = null
+        }, LONG_PRESS_DURATION)
       } else {
         // Touch on background - prepare for pan
         setPanStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y })
         setIsPanning(true)
       }
     }
-  }, [positions, zoom, pan])
+  }, [positions, zoom, pan, filteredNodes, multiSelectedNodeIds, onMultiSelectChange, LONG_PRESS_DURATION])
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2) {
-      // Pinch zoom
+      // Pinch zoom - cancel long press
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+        longPressTimer.current = null
+      }
       e.preventDefault()
       const touch1 = e.touches[0]
       const touch2 = e.touches[1]
@@ -460,6 +505,11 @@ export default function DetectiveBoard({
         const dy = Math.abs(touch.clientY - touchStartPos.current.y)
         if (dx > TOUCH_TAP_THRESHOLD || dy > TOUCH_TAP_THRESHOLD) {
           didDrag.current = true
+          // Cancel long press if movement detected
+          if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current)
+            longPressTimer.current = null
+          }
         }
       }
       
@@ -488,6 +538,12 @@ export default function DetectiveBoard({
   }, [zoom, pan, draggingNode, isPanning, dragOffset, panStart, TOUCH_TAP_THRESHOLD])
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    // Clear long press timer
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+    
     // Check if this was a tap (minimal movement) vs a drag
     if (e.changedTouches.length > 0 && touchStartPos.current && !didDrag.current) {
       const touch = e.changedTouches[0]
@@ -606,7 +662,7 @@ export default function DetectiveBoard({
               {/* Red yarn/string */}
               <path
                 d={calculateStringPath(sourcePos.x, sourcePos.y, targetPos.x, targetPos.y)}
-                stroke={RELATIONSHIP_COLORS[link.type] || '#dc2626'}
+                stroke={getRelationshipColor(link.type, link.strength)}
                 strokeWidth={isHighlighted ? 3 : 2}
                 fill="none"
                 opacity={isConnected ? (isHighlighted ? 1 : 0.7) : 0.15}
@@ -627,30 +683,43 @@ export default function DetectiveBoard({
 
         const rotation = getRandomRotation(node.id)
         const isSelected = selectedNodeId === node.id
+        const isMultiSelected = multiSelectedNodeIds.has(node.id)
         const isConnected = selectedNodeId ? connectedNodes.has(node.id) : true
         const isHovered = hoveredNode === node.id
         const isDead = node.status === 'dead'
-        const isCrew = node.nodeType === 'crew'
-        const isCrewMember = node.nodeType === 'crew-member'
+        const isUnknown = node.status === 'unknown'
+        const isOrganisation = node.entityType === 'organisation'
+        const isCharacter = node.entityType === 'character'
         const isPlayerGroup = node.name.toLowerCase().includes('player') || 
                              node.name.toLowerCase().includes('group') ||
                              node.name.toLowerCase().includes('party') ||
-                             isCrew
+                             isOrganisation
 
-        // Get member count for crew nodes
-        const memberCount = isCrew && node.members ? node.members.length : 0
+        // Get member count for organisation nodes
+        const memberCount = isOrganisation && node.members ? node.members.length : 0
+
+        // Calculate opacity:
+        // - If single node is selected, fade unconnected nodes
+        // - If multi-selecting (but not yet applied), fade unselected nodes
+        // - Otherwise, full opacity
+        let nodeOpacity = 1
+        if (selectedNodeId && !isConnected) {
+          nodeOpacity = 0.3
+        } else if (multiSelectedNodeIds.size > 0 && !isMultiSelectFilterActive && !isMultiSelected) {
+          nodeOpacity = 0.3
+        }
 
         return (
           <div
             key={node.id}
-            className={`polaroid-card ${isSelected ? 'selected' : ''} ${isDead ? 'dead' : ''} ${isPlayerGroup ? 'player-group' : ''} ${isCrew ? 'crew-node' : ''} ${isCrewMember ? 'crew-member-node' : ''}`}
+            className={`polaroid-card ${isSelected || isMultiSelected ? 'selected' : ''} ${isDead ? 'dead' : ''} ${isPlayerGroup ? 'player-group' : ''} ${isOrganisation ? 'org-node' : ''} ${isCharacter ? 'character-node' : ''}`}
             style={{
               position: 'absolute',
               left: pos.x,
               top: pos.y,
               transform: `translate(-50%, -50%) rotate(${isHovered || isSelected ? 0 : rotation}deg) ${isHovered ? 'scale(1.1)' : isSelected ? 'scale(1.15)' : 'scale(1)'}`,
-              opacity: isConnected ? 1 : 0.3,
-              zIndex: isSelected ? 100 : isHovered ? 50 : isCrew ? 15 : 10,
+              opacity: nodeOpacity,
+              zIndex: isSelected ? 100 : isHovered ? 50 : isOrganisation ? 15 : 10,
               transition: draggingNode === node.id ? 'none' : 'transform 0.2s ease, opacity 0.3s ease, z-index 0s',
               cursor: draggingNode === node.id ? 'grabbing' : 'pointer',
             }}
@@ -658,8 +727,25 @@ export default function DetectiveBoard({
               // Handle click/tap - works for both mouse and touch
               e.stopPropagation()
               if (!didDrag.current) {
-                setSelectedNodeId(node.id)
-                onNodeClick(node)
+                // Handle Ctrl+click for multi-select
+                if (e.ctrlKey || e.metaKey) {
+                  if (onMultiSelectChange) {
+                    const newSelection = new Set(multiSelectedNodeIds)
+                    if (newSelection.has(node.id)) {
+                      newSelection.delete(node.id)
+                    } else {
+                      newSelection.add(node.id)
+                    }
+                    onMultiSelectChange(newSelection)
+                  }
+                } else {
+                  // Clear multi-selection on regular click
+                  if (onMultiSelectChange && multiSelectedNodeIds.size > 0) {
+                    onMultiSelectChange(new Set())
+                  }
+                  setSelectedNodeId(node.id)
+                  onNodeClick(node)
+                }
               }
               didDrag.current = false
             }}
@@ -717,28 +803,27 @@ export default function DetectiveBoard({
             {/* Push pin */}
             <div 
               className="push-pin"
-              style={{ backgroundColor: isCrew ? '#3b82f6' : isCrewMember ? '#8b5cf6' : getPinColor(node.status || 'alive') }}
+              style={{ backgroundColor: node.pinColor || '#9ca3af' }}
             />
 
             {/* Photo frame */}
-            <div className="photo-frame">
+            <div className={`photo-frame aspect-${node.imageCrop?.aspectRatio || 'full'}`}>
               <img
                 src={node.imageUrl || getPlaceholderAvatar(node.name)}
                 alt={node.name}
                 className="photo-image"
                 draggable={false}
+                style={node.imageCrop ? {
+                  transform: `scale(${node.imageCrop.zoom}) translate(${node.imageCrop.offsetX / node.imageCrop.zoom}%, ${node.imageCrop.offsetY / node.imageCrop.zoom}%)`,
+                  transformOrigin: 'center',
+                } : undefined}
               />
               
-              {/* Crew member badge */}
-              {isCrew && memberCount > 0 && (
+              {/* Organisation member count badge */}
+              {isOrganisation && memberCount > 0 && (
                 <div className="crew-badge">
                   <span className="crew-badge-count">{memberCount}</span>
                 </div>
-              )}
-
-              {/* Crew member indicator */}
-              {isCrewMember && (
-                <div className="crew-member-indicator">👤</div>
               )}
               
               {/* Dead overlay */}
@@ -747,13 +832,20 @@ export default function DetectiveBoard({
                   <span className="dead-x">✕</span>
                 </div>
               )}
+              
+              {/* Unknown status overlay */}
+              {isUnknown && (
+                <div className="unknown-overlay">
+                  <span className="unknown-mark">?</span>
+                </div>
+              )}
             </div>
 
             {/* Name label (sticky note style) - only show when selected on mobile, show on hover/select for desktop */}
             {((isMobile && isSelected) || (!isMobile && (isHovered || isSelected))) && (
               <div className="name-label">
-                {isCrew && <span className="crew-label-prefix">👥 </span>}
-                {isCrewMember && <span className="crew-label-prefix">👤 </span>}
+                {isOrganisation && <span className="crew-label-prefix">🏛️ </span>}
+                {isCharacter && <span className="crew-label-prefix">👤 </span>}
                 {node.name}
                 {node.title && !isMobile && <span className="title-text">{node.title}</span>}
               </div>

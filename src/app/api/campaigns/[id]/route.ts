@@ -7,18 +7,14 @@ async function findCampaign(idOrSlug: string) {
   let campaign = await prisma.campaign.findUnique({
     where: { id: idOrSlug },
     include: {
-      crew: {
+      characters: {
         include: {
-          members: true,
-          relationshipsFrom: {
-            include: { toNpc: true }
-          }
+          organisations: true
         }
       },
-      npcs: {
+      organisations: {
         include: {
-          relationshipsFrom: true,
-          relationshipsTo: true
+          members: true
         }
       }
     }
@@ -28,18 +24,14 @@ async function findCampaign(idOrSlug: string) {
     campaign = await prisma.campaign.findUnique({
       where: { slug: idOrSlug },
       include: {
-        crew: {
+        characters: {
           include: {
-            members: true,
-            relationshipsFrom: {
-              include: { toNpc: true }
-            }
+            organisations: true
           }
         },
-        npcs: {
+        organisations: {
           include: {
-            relationshipsFrom: true,
-            relationshipsTo: true
+            members: true
           }
         }
       }
@@ -63,7 +55,13 @@ export async function GET(
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
     }
     
-    return NextResponse.json(campaign)
+    // Parse imageCrop from JSON string to object
+    const parsedCampaign = {
+      ...campaign,
+      imageCrop: campaign.imageCrop ? JSON.parse(campaign.imageCrop) : null
+    }
+    
+    return NextResponse.json(parsedCampaign)
   } catch (error) {
     console.error('Error fetching campaign:', error)
     return NextResponse.json({ error: 'Failed to fetch campaign' }, { status: 500 })
@@ -79,7 +77,7 @@ export async function PUT(
   
   try {
     const body = await request.json()
-    const { name, description, imageUrl, isActive } = body
+    const { name, description, imageUrl, imageCrop, isActive } = body
     
     // Find campaign by id or slug to get the actual id
     const existing = await findCampaign(id)
@@ -93,17 +91,26 @@ export async function PUT(
         ...(name && { name }),
         ...(description !== undefined && { description }),
         ...(imageUrl !== undefined && { imageUrl }),
+        ...(imageCrop !== undefined && { imageCrop: imageCrop ? JSON.stringify(imageCrop) : null }),
         ...(isActive !== undefined && { isActive }),
       },
       include: {
-        crew: true,
         _count: {
-          select: { npcs: true }
+          select: { 
+            characters: true,
+            organisations: true 
+          }
         }
       }
     })
     
-    return NextResponse.json(campaign)
+    // Parse imageCrop back to object for response
+    const parsedCampaign = {
+      ...campaign,
+      imageCrop: campaign.imageCrop ? JSON.parse(campaign.imageCrop) : null
+    }
+    
+    return NextResponse.json(parsedCampaign)
   } catch (error) {
     console.error('Error updating campaign:', error)
     return NextResponse.json({ error: 'Failed to update campaign' }, { status: 500 })
