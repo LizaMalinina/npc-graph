@@ -9,7 +9,7 @@ import DetectiveLegend from '@/components/detective/DetectiveLegend'
 import CharacterForm from '@/components/CharacterForm'
 import OrganisationForm from '@/components/OrganisationForm'
 import RelationshipForm from '@/components/RelationshipForm'
-import { GraphNode, GraphLink, FilterState, Character, Organisation, GraphData, EntityType } from '@/types'
+import { GraphNode, GraphLink, FilterState, Character, Organisation, GraphData, EntityType, getRelationshipColor } from '@/types'
 import {
   useCampaignGraphData,
   useCampaign,

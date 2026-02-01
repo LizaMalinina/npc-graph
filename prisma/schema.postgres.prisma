@@ -29,6 +29,7 @@ model Campaign {
   name          String
   description   String?
   imageUrl      String?
+  imageCrop     String?        // JSON string for crop settings {zoom, offsetX, offsetY, aspectRatio}
   isActive      Boolean        @default(true)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -64,6 +65,7 @@ model Organisation {
   description String?
   imageUrl    String?
   imageCrop   String?     // JSON string for crop settings {zoom, offsetX, offsetY}
+  pinColor    String?     // Hex color for organization pins (e.g., #ff6b6b)
   posX        Float?
   posY        Float?
   campaignId  String?

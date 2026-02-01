@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { GraphData, Character, Organisation, GraphLink, Campaign, EntityType } from '@/types'
+import { GraphData, Character, Organisation, GraphLink, Campaign, EntityType, CropSettings } from '@/types'
 
 const API_BASE = '/api'
 
@@ -34,7 +34,7 @@ export function useCreateCampaign() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async (data: { name: string; description?: string; organisationName?: string; imageUrl?: string }) => {
+    mutationFn: async (data: { name: string; description?: string; organisationName?: string; imageUrl?: string; imageCrop?: CropSettings }) => {
       const res = await fetch(`${API_BASE}/campaigns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,7 +70,7 @@ export function useUpdateCampaign() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string; imageUrl?: string | null }) => {
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string; imageUrl?: string | null; imageCrop?: CropSettings | null }) => {
       const res = await fetch(`${API_BASE}/campaigns/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
