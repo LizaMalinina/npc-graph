@@ -577,34 +577,6 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
               }
             </div>
           )}
-          
-          {/* Mobile multi-select Apply/Clear buttons */}
-          {isMobile && multiSelectedNodeIds.size >= 2 && !isMultiSelectFilterActive && (
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-              <button
-                onClick={() => {
-                  setIsMultiSelectFilterActive(true)
-                  setSelectedNode(null)
-                }}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium shadow-lg animate-pulse"
-              >
-                Apply ({multiSelectedNodeIds.size} selected)
-              </button>
-            </div>
-          )}
-          {isMobile && isMultiSelectFilterActive && (
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-              <button
-                onClick={() => {
-                  setIsMultiSelectFilterActive(false)
-                  setMultiSelectedNodeIds(new Set())
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium shadow-lg"
-              >
-                ✕ Clear Filter
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Node Panel - conditionally rendered inline on desktop */}
@@ -942,6 +914,34 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
           onCancel={() => setEditingRelationship(null)}
           onDelete={handleDeleteRelationship}
         />
+      )}
+
+      {/* Mobile multi-select Apply/Clear buttons - fixed above bottom sheet */}
+      {isMobile && multiSelectedNodeIds.size >= 2 && !isMultiSelectFilterActive && (
+        <div className="fixed bottom-[55vh] left-1/2 transform -translate-x-1/2 z-[250]">
+          <button
+            onClick={() => {
+              setIsMultiSelectFilterActive(true)
+              setSelectedNode(null)
+            }}
+            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 text-base font-medium shadow-xl animate-pulse"
+          >
+            ✓ Apply ({multiSelectedNodeIds.size} selected)
+          </button>
+        </div>
+      )}
+      {isMobile && isMultiSelectFilterActive && (
+        <div className="fixed bottom-[55vh] left-1/2 transform -translate-x-1/2 z-[250]">
+          <button
+            onClick={() => {
+              setIsMultiSelectFilterActive(false)
+              setMultiSelectedNodeIds(new Set())
+            }}
+            className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 text-base font-medium shadow-xl"
+          >
+            ✕ Clear Filter
+          </button>
+        </div>
       )}
     </div>
   )
