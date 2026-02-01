@@ -76,11 +76,38 @@ export default function DetectiveLegend({ onClose, organisations = [], isMobile 
           </h4>
           <div className="bg-black/20 rounded-lg p-3">
             <ul className="text-gray-200 text-sm space-y-2">
-              <li>Drag photos to rearrange</li>
-              <li>{isMobile ? 'Tap photo to see details' : 'Click photo to see details'}</li>
-              <li>{isMobile ? 'Long-press to multi-select' : 'Ctrl+click to multi-select'}</li>
-              <li>Drag background to pan</li>
-              <li>{isMobile ? 'Pinch to zoom in/out' : 'Scroll to zoom in/out'}</li>
+              {isMobile ? (
+                <>
+                  <li>Drag photos to rearrange</li>
+                  <li>Tap photo to see details</li>
+                  <li>Long-press to multi-select</li>
+                  <li>Drag background to pan</li>
+                  <li>Pinch to zoom in/out</li>
+                </>
+              ) : (
+                <>
+                  <li className="flex items-center gap-2">
+                    <span className="w-5 text-center">🖱️</span>
+                    <span>Drag photos to rearrange</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-5 text-center">👆</span>
+                    <span>Click photo to see details</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-5 text-center">⌨️</span>
+                    <span>Ctrl+click to multi-select</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-5 text-center">🔍</span>
+                    <span>Drag background to pan</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-5 text-center">🔄</span>
+                    <span>Scroll to zoom in/out</span>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         </div>

@@ -9,7 +9,7 @@ import DetectiveLegend from '@/components/detective/DetectiveLegend'
 import CharacterForm from '@/components/CharacterForm'
 import OrganisationForm from '@/components/OrganisationForm'
 import RelationshipForm from '@/components/RelationshipForm'
-import { GraphNode, GraphLink, FilterState, Character, Organisation, GraphData, EntityType, getRelationshipColor } from '@/types'
+import { GraphNode, GraphLink, FilterState, Character, Organisation, GraphData, EntityType, getRelationshipColor, getRelationshipSubValue } from '@/types'
 import {
   useCampaignGraphData,
   useCampaign,
@@ -704,67 +704,29 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
                     const otherNode = 'targetNode' in rel ? rel.targetNode : rel.sourceNode
                     const isOutgoing = 'targetNode' in rel
                     const relationshipColor = getRelationshipColor(rel.type, rel.strength || 3)
+                    const subValue = getRelationshipSubValue(
+                      rel.type,
+                      rel.strength || 3,
+                      rel.sourceType || 'character',
+                      rel.targetType || 'character'
+                    )
                     return otherNode ? (
                       <div 
                         key={rel.id || idx} 
-                        className="flex items-center gap-2 p-2 bg-[#2d4a3e] rounded-lg"
+                        className="flex items-center gap-2 p-2 bg-[#2d4a3e] rounded-lg cursor-pointer hover:bg-[#3d5a4e] active:bg-[#3d5a4e]"
+                        onClick={() => setEditingRelationship(rel)}
                       >
                         {/* Color indicator */}
                         <div 
-                          className="w-2 h-8 rounded-full flex-shrink-0"
+                          className="w-2 h-full min-h-[24px] rounded-full flex-shrink-0"
                           style={{ backgroundColor: relationshipColor }}
                         />
                         {/* Connection info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-400 text-xs">{isOutgoing ? '→' : '←'}</span>
-                            <button
-                              onClick={() => {
-                                const targetNode = graphData?.nodes.find(n => n.id === otherNode.id)
-                                if (targetNode) {
-                                  if (selectedNode.entityType === 'organisation') {
-                                    setParentOrg(selectedNode)
-                                  }
-                                  setSelectedNode(targetNode)
-                                }
-                              }}
-                              className="text-white text-sm font-medium truncate hover:text-[#b8860b]"
-                            >
-                              {otherNode.name}
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span 
-                              className="text-xs px-1.5 py-0.5 rounded"
-                              style={{ 
-                                backgroundColor: `${relationshipColor}30`,
-                                color: relationshipColor 
-                              }}
-                            >
-                              {rel.type}
-                            </span>
-                            {rel.description && (
-                              <span className="text-gray-400 text-xs truncate">{rel.description}</span>
-                            )}
-                          </div>
+                          <span className="text-white text-sm font-medium">
+                            {isOutgoing ? '→' : '←'} {otherNode.name} <span className="italic text-gray-300 font-normal">({subValue})</span>
+                          </span>
                         </div>
-                        {/* Edit button */}
-                        {canEdit && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setEditingRelationship(rel)
-                            }}
-                            onTouchEnd={(e) => {
-                              e.stopPropagation()
-                              e.preventDefault()
-                              setEditingRelationship(rel)
-                            }}
-                            className="w-8 h-8 bg-blue-600/30 text-blue-300 rounded flex items-center justify-center text-sm hover:bg-blue-600/50 active:bg-blue-600/70 flex-shrink-0"
-                          >
-                            ✏️
-                          </button>
-                        )}
                       </div>
                     ) : null
                   })}
@@ -923,9 +885,9 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
         />
       )}
 
-      {/* Mobile multi-select Apply/Clear buttons - fixed above bottom sheet */}
+      {/* Mobile multi-select Apply/Clear buttons - fixed under header */}
       {isMobile && multiSelectedNodeIds.size >= 2 && !isMultiSelectFilterActive && (
-        <div className="fixed bottom-[55vh] left-1/2 transform -translate-x-1/2 z-[250]">
+        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-[250]">
           <button
             onClick={() => {
               setIsMultiSelectFilterActive(true)
@@ -938,7 +900,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
         </div>
       )}
       {isMobile && isMultiSelectFilterActive && (
-        <div className="fixed bottom-[55vh] left-1/2 transform -translate-x-1/2 z-[250]">
+        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-[250]">
           <button
             onClick={() => {
               setIsMultiSelectFilterActive(false)

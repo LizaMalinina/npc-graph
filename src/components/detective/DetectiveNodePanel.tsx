@@ -206,19 +206,11 @@ export default function DetectiveNodePanel({
                 >
                   <div className="flex items-center gap-2">
                     <span 
-                      className="w-3 h-3 rounded-full"
+                      className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: color }}
                     />
-                    <span className="text-white text-sm flex-1">
-                      → {rel.targetNode?.name || 'Unknown'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1 ml-5">
-                    <span 
-                      className="text-xs px-1.5 py-0.5 rounded"
-                      style={{ backgroundColor: color + '30', color: color }}
-                    >
-                      {subValue}
+                    <span className="text-white text-sm">
+                      → {rel.targetNode?.name || 'Unknown'} <span className="italic text-gray-300">({subValue})</span>
                     </span>
                   </div>
                 </div>
@@ -243,19 +235,11 @@ export default function DetectiveNodePanel({
                 >
                   <div className="flex items-center gap-2">
                     <span 
-                      className="w-3 h-3 rounded-full"
+                      className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: color }}
                     />
-                    <span className="text-white text-sm flex-1">
-                      ← {rel.sourceNode?.name || 'Unknown'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1 ml-5">
-                    <span 
-                      className="text-xs px-1.5 py-0.5 rounded"
-                      style={{ backgroundColor: color + '30', color: color }}
-                    >
-                      {subValue}
+                    <span className="text-white text-sm">
+                      ← {rel.sourceNode?.name || 'Unknown'} <span className="italic text-gray-300">({subValue})</span>
                     </span>
                   </div>
                 </div>
