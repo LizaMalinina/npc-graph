@@ -745,6 +745,13 @@ export default function DetectiveBoard({
               didDrag.current = false
               touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
               touchNodeId.current = node.id
+              
+              // Clear any existing long press timer
+              if (longPressTimer.current) {
+                clearTimeout(longPressTimer.current)
+                longPressTimer.current = null
+              }
+              
               // Set up for potential drag
               const pos = positions.get(node.id)
               if (pos) {
@@ -757,6 +764,29 @@ export default function DetectiveBoard({
                   setDraggingNode(node.id)
                 }
               }
+              
+              // Set up long press timer for multi-select
+              if (onMultiSelectChange) {
+                longPressTimer.current = setTimeout(() => {
+                  if (!didDrag.current && touchNodeId.current === node.id) {
+                    // Long press detected - toggle multi-select
+                    const newSet = new Set(multiSelectedNodeIds)
+                    if (newSet.has(node.id)) {
+                      newSet.delete(node.id)
+                    } else {
+                      newSet.add(node.id)
+                    }
+                    onMultiSelectChange(newSet)
+                    // Vibrate for feedback if available
+                    if (navigator.vibrate) {
+                      navigator.vibrate(50)
+                    }
+                    // Prevent regular tap from also triggering
+                    touchNodeId.current = null
+                  }
+                  longPressTimer.current = null
+                }, LONG_PRESS_DURATION)
+              }
             }}
             onTouchMove={(e) => {
               e.stopPropagation()
@@ -766,6 +796,11 @@ export default function DetectiveBoard({
                 const dy = Math.abs(touch.clientY - touchStartPos.current.y)
                 if (dx > TOUCH_TAP_THRESHOLD || dy > TOUCH_TAP_THRESHOLD) {
                   didDrag.current = true
+                  // Cancel long press timer if movement detected
+                  if (longPressTimer.current) {
+                    clearTimeout(longPressTimer.current)
+                    longPressTimer.current = null
+                  }
                   // Move the node - don't call preventDefault, let CSS touch-action handle it
                   const rect = containerRef.current?.getBoundingClientRect()
                   if (rect && draggingNode) {
@@ -782,6 +817,11 @@ export default function DetectiveBoard({
             }}
             onTouchEnd={(e) => {
               e.stopPropagation()
+              // Clear long press timer
+              if (longPressTimer.current) {
+                clearTimeout(longPressTimer.current)
+                longPressTimer.current = null
+              }
               // Reset state - onClick will handle selection if it was a tap
               setDraggingNode(null)
               touchStartPos.current = null
