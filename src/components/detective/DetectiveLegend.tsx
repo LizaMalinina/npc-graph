@@ -5,9 +5,10 @@ import { Organisation } from '@/types'
 interface DetectiveLegendProps {
   onClose?: () => void
   organisations?: Organisation[]
+  isMobile?: boolean
 }
 
-export default function DetectiveLegend({ onClose, organisations = [] }: DetectiveLegendProps) {
+export default function DetectiveLegend({ onClose, organisations = [], isMobile = false }: DetectiveLegendProps) {
   // Filter to only orgs with pin colors
   const orgsWithColors = organisations.filter(org => org.pinColor)
   
@@ -75,26 +76,11 @@ export default function DetectiveLegend({ onClose, organisations = [] }: Detecti
           </h4>
           <div className="bg-black/20 rounded-lg p-3">
             <ul className="text-gray-200 text-sm space-y-2">
-              <li className="flex items-center gap-2">
-                <span className="w-5 text-center">🖱️</span>
-                <span>Drag photos to rearrange</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-5 text-center">👆</span>
-                <span>Click photo to see details</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-5 text-center">⌨️</span>
-                <span>Ctrl+click to multi-select</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-5 text-center">🔍</span>
-                <span>Drag background to pan</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-5 text-center">🔄</span>
-                <span>Scroll to zoom in/out</span>
-              </li>
+              <li>Drag photos to rearrange</li>
+              <li>{isMobile ? 'Tap photo to see details' : 'Click photo to see details'}</li>
+              <li>{isMobile ? 'Long-press to multi-select' : 'Ctrl+click to multi-select'}</li>
+              <li>Drag background to pan</li>
+              <li>{isMobile ? 'Pinch to zoom in/out' : 'Scroll to zoom in/out'}</li>
             </ul>
           </div>
         </div>

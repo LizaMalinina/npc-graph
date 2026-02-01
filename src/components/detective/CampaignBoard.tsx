@@ -748,16 +748,22 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
                             )}
                           </div>
                         </div>
-                        {/* Edit/Delete buttons */}
+                        {/* Edit button */}
                         {canEdit && (
-                          <div className="flex gap-1 flex-shrink-0">
-                            <button
-                              onClick={() => setEditingRelationship(rel)}
-                              className="w-7 h-7 bg-blue-600/30 text-blue-300 rounded flex items-center justify-center text-xs hover:bg-blue-600/50"
-                            >
-                              ✏️
-                            </button>
-                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setEditingRelationship(rel)
+                            }}
+                            onTouchEnd={(e) => {
+                              e.stopPropagation()
+                              e.preventDefault()
+                              setEditingRelationship(rel)
+                            }}
+                            className="w-8 h-8 bg-blue-600/30 text-blue-300 rounded flex items-center justify-center text-sm hover:bg-blue-600/50 active:bg-blue-600/70 flex-shrink-0"
+                          >
+                            ✏️
+                          </button>
                         )}
                       </div>
                     ) : null
@@ -843,6 +849,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
         <DetectiveLegend 
           onClose={() => setShowLegend(false)} 
           organisations={organisations}
+          isMobile={isMobile}
         />
       )}
 

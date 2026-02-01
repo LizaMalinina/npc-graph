@@ -195,9 +195,6 @@ export default function RelationshipForm({
                       borderColor: color,
                     } : undefined}
                   >
-                    {type === 'friendly' && '😊'} 
-                    {type === 'hostile' && '😠'} 
-                    {type === 'neutral' && '😐'} 
                     {type.charAt(0).toUpperCase() + type.slice(1)}
                   </button>
                 )
