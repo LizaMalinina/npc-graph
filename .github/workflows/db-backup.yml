@@ -10,21 +10,17 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Install PostgreSQL 17 client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client-17
-
-      - name: Run pg_dump (Postgres 17)
+      - name: Run pg_dump via Docker (Postgres 17)
         env:
           DATABASE_URL_PRD: ${{ secrets.DATABASE_URL_PRD }}
         run: |
           mkdir -p backups
-          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL_PRD" \
-            --format=custom \
-            --no-owner \
-            --no-acl \
-            --file backups/db_backup_$(date +%F).dump
+          docker run --rm -v "$PWD/backups":/backups \
+            -e DATABASE_URL_PRD \
+            postgres:17 \
+            bash -lc 'pg_dump "$DATABASE_URL_PRD" \
+              --format=custom --no-owner --no-acl \
+              --file /backups/db_backup_$(date +%F).dump'
 
 
       - name: Upload backup artifact
