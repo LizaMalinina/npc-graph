@@ -48,6 +48,10 @@ All development and test execution **must be done within Docker containers**.
 1. Understand the existing patterns in the codebase
 2. Check related files for consistency
 3. Review types in `src/types/index.ts`
+4. **Check if changes affect multiple files that must stay in sync:**
+   - `prisma/schema.prisma` ↔ `prisma/schema.postgres.prisma`
+   - `src/types/index.ts` ↔ `src/hooks/useApi.ts` (when adding new fields)
+   - `Dockerfile` ↔ `Dockerfile.prod` (when changing build steps)
 
 ### When Creating API Routes
 
@@ -60,8 +64,19 @@ All development and test execution **must be done within Docker containers**.
 
 - Schema changes go in `prisma/schema.prisma`
 - PostgreSQL-specific schema in `prisma/schema.postgres.prisma`
+- **CRITICAL: Any change to `schema.prisma` MUST also be applied to `schema.postgres.prisma`** - these schemas must stay in sync
 - Run migrations after schema changes
 - Update seed data in `prisma/seed.ts` if needed
+
+### Production Build Verification
+
+- **CRITICAL: After any schema, type, or significant code changes, verify the production build:**
+  ```bash
+  docker build -f Dockerfile.prod -t npc-graph-test .
+  ```
+- Local tests use SQLite; production uses PostgreSQL - both must work
+- The production Dockerfile (`Dockerfile.prod`) uses `schema.postgres.prisma`
+- Never assume passing local tests means production will build successfully
 
 ### When Creating Components
 

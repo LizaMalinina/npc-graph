@@ -161,39 +161,23 @@ describe('ImageCropper Component', () => {
     })
   })
 
-  describe('Image aspect ratio support', () => {
-    it('should display crop shape buttons', () => {
+  describe('Image cropping', () => {
+    it('should show crop area for portrait framing', async () => {
       render(
         <ImageCropper
           imageUrl={mockImageUrl}
           onChange={mockOnChange}
           onCancel={mockOnCancel}
+          initialCropSettings={{ zoom: 1, offsetX: 0, offsetY: 0, aspectRatio: 'portrait' }}
         />
       )
       
-      // Should have crop shape buttons
-      expect(screen.getByText('Full')).toBeInTheDocument()
-      expect(screen.getByText('Square')).toBeInTheDocument()
-      expect(screen.getByText('Portrait')).toBeInTheDocument()
-      expect(screen.getByText('Landscape')).toBeInTheDocument()
-    })
-
-    it('should show crop area when non-full aspect ratio is selected', async () => {
-      render(
-        <ImageCropper
-          imageUrl={mockImageUrl}
-          onChange={mockOnChange}
-          onCancel={mockOnCancel}
-          initialCropSettings={{ zoom: 1, offsetX: 0, offsetY: 0, aspectRatio: 'square' }}
-        />
-      )
-      
-      // The crop area should be visible for square aspect ratio
+      // The crop area should be visible for portrait aspect ratio
       const cropArea = screen.getByTestId('crop-area')
       expect(cropArea).toBeInTheDocument()
     })
 
-    it('should include aspectRatio in onChange callback', () => {
+    it('should include aspectRatio as portrait in onChange callback', () => {
       render(
         <ImageCropper
           imageUrl={mockImageUrl}
@@ -202,56 +186,12 @@ describe('ImageCropper Component', () => {
         />
       )
       
-      // Click confirm with default (full) aspect ratio
-      fireEvent.click(screen.getByRole('button', { name: /apply/i }))
-      
-      expect(mockOnChange).toHaveBeenCalledWith(
-        expect.objectContaining({
-          aspectRatio: 'full',
-        })
-      )
-    })
-
-    it('should change aspect ratio when clicking shape buttons', () => {
-      render(
-        <ImageCropper
-          imageUrl={mockImageUrl}
-          onChange={mockOnChange}
-          onCancel={mockOnCancel}
-        />
-      )
-      
-      // Click portrait button
-      fireEvent.click(screen.getByText('Portrait'))
-      
-      // Click confirm
+      // Click confirm - should always be portrait
       fireEvent.click(screen.getByRole('button', { name: /apply/i }))
       
       expect(mockOnChange).toHaveBeenCalledWith(
         expect.objectContaining({
           aspectRatio: 'portrait',
-        })
-      )
-    })
-
-    it('should change aspect ratio to landscape when clicking landscape button', () => {
-      render(
-        <ImageCropper
-          imageUrl={mockImageUrl}
-          onChange={mockOnChange}
-          onCancel={mockOnCancel}
-        />
-      )
-      
-      // Click landscape button
-      fireEvent.click(screen.getByText('Landscape'))
-      
-      // Click confirm
-      fireEvent.click(screen.getByRole('button', { name: /apply/i }))
-      
-      expect(mockOnChange).toHaveBeenCalledWith(
-        expect.objectContaining({
-          aspectRatio: 'landscape',
         })
       )
     })
@@ -332,6 +272,70 @@ describe('ImageCropper Component', () => {
       
       // The component should not crash
       expect(imageArea).toBeInTheDocument()
+    })
+  })
+
+  describe('Portrait-only mode', () => {
+    it('should NOT display aspect ratio selector buttons', () => {
+      render(
+        <ImageCropper
+          imageUrl={mockImageUrl}
+          onChange={mockOnChange}
+          onCancel={mockOnCancel}
+        />
+      )
+      
+      // Aspect ratio buttons should NOT exist
+      expect(screen.queryByText('Full')).not.toBeInTheDocument()
+      expect(screen.queryByText('Square')).not.toBeInTheDocument()
+      expect(screen.queryByText('Landscape')).not.toBeInTheDocument()
+    })
+
+    it('should always use portrait aspect ratio in crop settings', () => {
+      render(
+        <ImageCropper
+          imageUrl={mockImageUrl}
+          onChange={mockOnChange}
+          onCancel={mockOnCancel}
+        />
+      )
+      
+      // Click confirm
+      fireEvent.click(screen.getByRole('button', { name: /apply/i }))
+      
+      expect(mockOnChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          aspectRatio: 'portrait',
+        })
+      )
+    })
+
+    it('should show portrait crop area by default', () => {
+      render(
+        <ImageCropper
+          imageUrl={mockImageUrl}
+          onChange={mockOnChange}
+          onCancel={mockOnCancel}
+        />
+      )
+      
+      // The portrait crop area should be visible
+      const cropArea = screen.getByTestId('crop-area')
+      expect(cropArea).toBeInTheDocument()
+    })
+
+    it('should render image container with portrait aspect ratio (3:4)', () => {
+      render(
+        <ImageCropper
+          imageUrl={mockImageUrl}
+          onChange={mockOnChange}
+          onCancel={mockOnCancel}
+        />
+      )
+      
+      const imageContainer = screen.getByTestId('image-container')
+      // Should have portrait aspect ratio styling
+      expect(imageContainer).toHaveClass('aspect-[3/4]')
     })
   })
 })

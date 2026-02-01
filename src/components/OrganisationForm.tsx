@@ -165,14 +165,11 @@ export default function OrganisationForm({
             </label>
             <div className="space-y-2">
               {formData.imageUrl && (
-                <div className="flex items-start gap-2">
+                <div className="flex items-center gap-2 p-2 bg-gray-700/50 rounded-lg">
                   <div 
-                    className={`relative rounded-lg overflow-hidden cursor-pointer group ${
-                      formData.imageCrop?.aspectRatio === 'portrait' ? 'w-20 aspect-[3/4]' :
-                      formData.imageCrop?.aspectRatio === 'landscape' ? 'w-32 aspect-[4/3]' :
-                      'w-24 aspect-square'
-                    }`}
+                    className="relative w-12 aspect-[3/4] rounded overflow-hidden bg-gray-900 cursor-pointer group flex-shrink-0"
                     onClick={() => setShowImageCropper(true)}
+                    title="Click to adjust"
                   >
                     <img 
                       src={formData.imageUrl} 
@@ -183,27 +180,22 @@ export default function OrganisationForm({
                         transformOrigin: 'center',
                       } : undefined}
                     />
-                    {/* Hover overlay */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="text-white text-xs">✏️ Edit</span>
-                    </div>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setShowImageCropper(true)}
-                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '', imageCrop: null }))}
-                      className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-                    >
-                      ✕ Remove
-                    </button>
-                  </div>
+                  <span className="text-xs text-gray-400 flex-1 truncate">Image set</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowImageCropper(true)}
+                    className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                  >
+                    ✏️ Crop
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, imageUrl: '', imageCrop: null }))}
+                    className="px-2 py-1 bg-gray-600 text-white text-xs rounded hover:bg-red-600"
+                  >
+                    🗑️
+                  </button>
                 </div>
               )}
               <div className="flex gap-2">

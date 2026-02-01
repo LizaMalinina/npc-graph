@@ -1,16 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-
-// Generate a URL-friendly slug from a name
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '') // Remove special characters
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/-+/g, '-') // Replace multiple hyphens with single
-    .substring(0, 50) // Limit length
-}
+import { generateSlug } from '@/lib/utils'
 
 // Ensure slug is unique by appending a number if needed
 async function ensureUniqueSlug(baseSlug: string): Promise<string> {

@@ -4,45 +4,31 @@ import { useState, useRef } from 'react'
 import { Character, Organisation, CHARACTER_STATUSES, CropSettings } from '@/types'
 import ImageCropper from '@/components/ImageCropper'
 
-type CharacterType = 'character' | 'org-member'
-
 interface CharacterFormProps {
   character?: Character | null
-  onSubmit: (data: Partial<Character>) => void
-  onSubmitOrgMember?: (orgId: string, data: { name: string; title?: string; description?: string; imageUrl?: string; imageCrop?: CropSettings }) => void
+  onSubmit: (data: Partial<Character> & { organisationId?: string }) => void
   onCancel: () => void
   onDelete?: () => void
   organisations?: Organisation[]
-  allowCharacterTypeSelection?: boolean
   campaignId?: string
-  onAddToOrg?: (characterId: string, orgId: string) => Promise<void>
-  onRemoveFromOrg?: (characterId: string, orgId: string) => Promise<void>
 }
 
 export default function CharacterForm({ 
   character, 
   onSubmit, 
-  onSubmitOrgMember, 
   onCancel, 
   onDelete, 
   organisations = [], 
-  allowCharacterTypeSelection = false,
   campaignId,
-  onAddToOrg,
-  onRemoveFromOrg,
 }: CharacterFormProps) {
-  const [characterType, setCharacterType] = useState<CharacterType>('character')
-  const [selectedOrgId, setSelectedOrgId] = useState<string>(organisations[0]?.id || '')
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const [orgUpdateLoading, setOrgUpdateLoading] = useState(false)
   const [showImageCropper, setShowImageCropper] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  // Track current memberships for editing
-  const [currentMemberships, setCurrentMemberships] = useState<{ id: string; name: string }[]>(
-    character?.organisations || []
-  )
+  // Get first organisation if character has any memberships
+  const initialOrgId = character?.organisations?.[0]?.id || ''
+  const [selectedOrgId, setSelectedOrgId] = useState<string>(initialOrgId)
   
   const [formData, setFormData] = useState({
     name: character?.name || '',
@@ -97,17 +83,11 @@ export default function CharacterForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (characterType === 'org-member' && onSubmitOrgMember && selectedOrgId) {
-      onSubmitOrgMember(selectedOrgId, {
-        name: formData.name,
-        title: formData.title || undefined,
-        description: formData.description || undefined,
-        imageUrl: formData.imageUrl || undefined,
-        imageCrop: formData.imageCrop || undefined,
-      })
-    } else {
-      onSubmit(formData)
-    }
+    // Submit with optional organisation
+    onSubmit({
+      ...formData,
+      ...(selectedOrgId ? { organisationId: selectedOrgId } : {}),
+    })
   }
 
   const handleChange = (
@@ -117,8 +97,6 @@ export default function CharacterForm({
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const isOrgMember = characterType === 'org-member'
-
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[200]" onClick={onCancel}>
       <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -127,64 +105,13 @@ export default function CharacterForm({
         </h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Character Type Selection - only for new characters */}
-          {!character && allowCharacterTypeSelection && organisations.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Add to Organisation?
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCharacterType('character')}
-                  className={`flex-1 px-4 py-2 rounded-md transition-colors ${
-                    characterType === 'character'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  🎭 Independent
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCharacterType('org-member')}
-                  className={`flex-1 px-4 py-2 rounded-md transition-colors ${
-                    characterType === 'org-member'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  🏛️ Org Member
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Organisation Selection - only for org members */}
-          {isOrgMember && organisations.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Add to Organisation *
-              </label>
-              <select
-                value={selectedOrgId}
-                onChange={(e) => setSelectedOrgId(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                {organisations.map(org => (
-                  <option key={org.id} value={org.id}>
-                    🏛️ {org.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
+          {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="char-name" className="block text-sm font-medium text-gray-300 mb-1">
               Name *
             </label>
             <input
+              id="char-name"
               type="text"
               name="name"
               value={formData.name}
@@ -194,6 +121,7 @@ export default function CharacterForm({
             />
           </div>
 
+          {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
               Title
@@ -208,6 +136,29 @@ export default function CharacterForm({
             />
           </div>
 
+          {/* Organisation - optional dropdown */}
+          {organisations.length > 0 && (
+            <div>
+              <label htmlFor="char-organisation" className="block text-sm font-medium text-gray-300 mb-1">
+                Organisation
+              </label>
+              <select
+                id="char-organisation"
+                value={selectedOrgId}
+                onChange={(e) => setSelectedOrgId(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">None</option>
+                {organisations.map(org => (
+                  <option key={org.id} value={org.id}>
+                    {org.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
               Description
@@ -227,13 +178,9 @@ export default function CharacterForm({
             </label>
             <div className="space-y-2">
               {formData.imageUrl && (
-                <div className="flex items-start gap-3">
+                <div className="flex items-center gap-2 p-2 bg-gray-700/50 rounded-lg">
                   <div 
-                    className={`relative rounded-lg overflow-hidden bg-gray-900 cursor-pointer group ${
-                      formData.imageCrop?.aspectRatio === 'portrait' ? 'w-20 aspect-[3/4]' :
-                      formData.imageCrop?.aspectRatio === 'landscape' ? 'w-32 aspect-[4/3]' :
-                      'w-24 aspect-square'
-                    }`}
+                    className="relative w-12 aspect-[3/4] rounded overflow-hidden bg-gray-900 cursor-pointer group flex-shrink-0"
                     onClick={() => setShowImageCropper(true)}
                     title="Click to adjust"
                   >
@@ -246,27 +193,22 @@ export default function CharacterForm({
                         transformOrigin: 'center',
                       } : undefined}
                     />
-                    {/* Hover overlay */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="text-white text-xs">✏️ Edit</span>
-                    </div>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setShowImageCropper(true)}
-                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '', imageCrop: null }))}
-                      className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-                    >
-                      × Remove
-                    </button>
-                  </div>
+                  <span className="text-xs text-gray-400 flex-1 truncate">Image set</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowImageCropper(true)}
+                    className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                  >
+                    ✏️ Crop
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, imageUrl: '', imageCrop: null }))}
+                    className="px-2 py-1 bg-gray-600 text-white text-xs rounded hover:bg-red-600"
+                  >
+                    🗑️
+                  </button>
                 </div>
               )}
               <div className="flex gap-2">
@@ -304,13 +246,11 @@ export default function CharacterForm({
             </div>
           </div>
 
-          {/* Only show these fields for regular characters, not org members */}
-          {!isOrgMember && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Faction
-                </label>
+          {/* Faction */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Faction
+            </label>
                 <input
                   type="text"
                   name="faction"
@@ -366,94 +306,6 @@ export default function CharacterForm({
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-            </>
-          )}
-
-          {/* Organisation membership - for editing existing characters */}
-          {character && organisations.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Organisation Membership
-              </label>
-              <p className="text-xs text-gray-500 mb-2">
-                Characters can belong to one organisation maximum
-              </p>
-              <div className="space-y-2">
-                {currentMemberships.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {currentMemberships.map(org => (
-                      <span key={org.id} className="inline-flex items-center bg-purple-600/30 text-purple-300 px-2 py-1 rounded">
-                        🏛️ {org.name}
-                        {onRemoveFromOrg && (
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              setOrgUpdateLoading(true)
-                              try {
-                                await onRemoveFromOrg(character.id, org.id)
-                                setCurrentMemberships(prev => prev.filter(o => o.id !== org.id))
-                              } catch (error) {
-                                console.error('Failed to remove from org:', error)
-                              }
-                              setOrgUpdateLoading(false)
-                            }}
-                            disabled={orgUpdateLoading}
-                            className="ml-2 text-purple-400 hover:text-red-400 disabled:opacity-50"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500 italic">Not a member of any organisation</p>
-                )}
-                
-                {/* Add to organisation dropdown - only show if character has no org (limit 1) */}
-                {onAddToOrg && currentMemberships.length === 0 && (
-                  <div className="flex gap-2 mt-2">
-                    <select
-                      value={selectedOrgId}
-                      onChange={(e) => setSelectedOrgId(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="">Select organisation...</option>
-                      {organisations
-                        .filter(org => !currentMemberships.some(m => m.id === org.id))
-                        .map(org => (
-                          <option key={org.id} value={org.id}>
-                            {org.name}
-                          </option>
-                        ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!selectedOrgId) return
-                        setOrgUpdateLoading(true)
-                        try {
-                          await onAddToOrg(character.id, selectedOrgId)
-                          const addedOrg = organisations.find(o => o.id === selectedOrgId)
-                          if (addedOrg) {
-                            setCurrentMemberships(prev => [...prev, { id: addedOrg.id, name: addedOrg.name }])
-                          }
-                          setSelectedOrgId('')
-                        } catch (error) {
-                          console.error('Failed to add to org:', error)
-                        }
-                        setOrgUpdateLoading(false)
-                      }}
-                      disabled={orgUpdateLoading || !selectedOrgId}
-                      className="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 text-sm"
-                    >
-                      Add
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           <div className="flex gap-2 pt-4">
             {onDelete && character && (

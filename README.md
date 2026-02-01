@@ -10,11 +10,12 @@ A web application for managing and visualizing NPC (Non-Playable Character) rela
 - 🔍 **Advanced Filtering** - Filter by faction, location, status, and relationship types
 - 👤 **NPC Management** - Add, edit, and delete NPCs with detailed information
 - 🔗 **Relationship Tracking** - Create relationships between NPCs with types and strengths
+- � **Mobile-First Design** - Touch gestures, long-press multi-select, bottom sheet details
 - 🔐 **Role-Based Access** - Viewer, Editor, and Admin roles
 - 💾 **Persistent Storage** - SQLite (local) or PostgreSQL (production)
 - 🐳 **Docker Support** - Run everything in containers
 - ☁️ **Azure Deployment** - Ready for Azure Container Apps
-- 📸 **Image Upload** - Azure Blob Storage integration for NPC portraits
+- 📸 **Image Upload** - Azure Blob Storage integration with cropping support
 
 ## Environment Variables
 
@@ -231,8 +232,7 @@ npc-graph/
 │   │   │   ├── CampaignBoard.tsx     # Main board with campaign context
 │   │   │   ├── DetectiveBoard.tsx    # Draggable photo board
 │   │   │   ├── DetectiveFilterPanel.tsx
-│   │   │   ├── DetectiveLegend.tsx
-│   │   │   └── DetectiveNpcPanel.tsx
+│   │   │   └── DetectiveLegend.tsx
 │   │   ├── NpcForm.tsx
 │   │   ├── RelationshipForm.tsx
 │   │   └── Providers.tsx
@@ -363,16 +363,20 @@ npm run dev
 
 ## Completed Features
 
-- [x] Image upload for NPC portraits (Azure Blob Storage)
+- [x] Image upload for NPC portraits with cropping support
 - [x] Campaign management system with slug-based URLs
 - [x] Detective board visualization with yarn connections
 - [x] Crew management with members
 - [x] Crew member navigation and relationships
-- [x] Mobile-responsive design and touch support
+- [x] Mobile-responsive design with touch support
+- [x] Mobile bottom sheet for entity details
+- [x] Long-press multi-select on mobile devices
+- [x] Haptic feedback for mobile interactions
 - [x] Drag and drop nodes on mobile and desktop
 - [x] Pinch-to-zoom and pan on board
 - [x] Single connection enforcement between characters
 - [x] CI/CD with GitHub Actions to Azure Container Apps
+- [x] Organisation pin colors and customization
 
 ## License
 

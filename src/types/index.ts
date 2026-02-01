@@ -4,8 +4,8 @@
 
 export type EntityType = 'character' | 'organisation'
 
-// Aspect ratio presets for image cropping
-export type AspectRatio = 'full' | 'square' | 'portrait' | 'landscape'
+// Aspect ratio preset for image cropping (portrait only)
+export type AspectRatio = 'portrait'
 
 // Image crop settings for zoom/pan on uploaded images
 export interface CropSettings {

@@ -66,9 +66,9 @@ export default function DetectiveNodePanel({
         </div>
       )}
 
-      {/* Photo */}
+      {/* Photo - always portrait aspect ratio */}
       <div className="p-4">
-        <div className={`relative w-full rounded-lg overflow-hidden border-4 border-[#8b7355] bg-[#2d4a3e] ${node.imageCrop?.aspectRatio === 'portrait' ? 'aspect-[3/4]' : node.imageCrop?.aspectRatio === 'landscape' ? 'aspect-[4/3]' : 'aspect-square'}`}>
+        <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden border-4 border-[#8b7355] bg-[#2d4a3e]">
           <img
             src={node.imageUrl || getPlaceholderAvatar(node.name, isOrganisation ? '8b5cf6' : '3b82f6')}
             alt={node.name}

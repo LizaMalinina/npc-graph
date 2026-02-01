@@ -128,43 +128,29 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
     }
   }
 
-  // Handle creating a new character
-  const handleCreateCharacter = async (data: Partial<Character>) => {
+  // Handle creating a new character (with optional organisation assignment)
+  const handleCreateCharacter = async (data: Partial<Character> & { organisationId?: string }) => {
     try {
-      await createCharacter.mutateAsync({
-        ...data,
+      const { organisationId, ...characterData } = data
+      const newCharacter = await createCharacter.mutateAsync({
+        ...characterData,
         campaignId: campaign?.id, // Use actual campaign ID, not slug
       })
+      // If organisation was selected, add membership
+      if (organisationId) {
+        await addMember.mutateAsync({
+          characterId: newCharacter.id,
+          organisationId,
+        })
+      }
       setShowCharacterForm(false)
     } catch (error) {
       console.error('Failed to create character:', error)
     }
   }
 
-  // Handle creating a character as an org member
-  const handleCreateOrgMember = async (orgId: string, data: { name: string; title?: string; description?: string; imageUrl?: string }) => {
-    try {
-      // First create the character
-      const newCharacter = await createCharacter.mutateAsync({
-        name: data.name,
-        title: data.title,
-        description: data.description,
-        imageUrl: data.imageUrl,
-        campaignId: campaign?.id,
-      })
-      // Then add them to the organisation
-      await addMember.mutateAsync({
-        characterId: newCharacter.id,
-        organisationId: orgId,
-      })
-      setShowCharacterForm(false)
-    } catch (error) {
-      console.error('Failed to create org member:', error)
-    }
-  }
-
-  // Handle updating a character
-  const handleUpdateCharacter = async (data: Partial<Character>) => {
+  // Handle updating a character (with optional organisation change)
+  const handleUpdateCharacter = async (data: Partial<Character> & { organisationId?: string }) => {
     if (!editingCharacter) return
     try {
       await updateCharacter.mutateAsync({
@@ -697,7 +683,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
             {/* Quick info row */}
             <div className="flex gap-3 mb-3">
               {selectedNode.imageUrl && (
-                <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-[#8b7355] flex-shrink-0">
+                <div className="w-20 aspect-[3/4] rounded-lg overflow-hidden border-2 border-[#8b7355] flex-shrink-0">
                   <img
                     src={selectedNode.imageUrl}
                     alt={selectedNode.name}
@@ -892,10 +878,8 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       {showCharacterForm && (
         <CharacterForm
           onSubmit={handleCreateCharacter}
-          onSubmitOrgMember={handleCreateOrgMember}
           onCancel={() => setShowCharacterForm(false)}
           organisations={organisations}
-          allowCharacterTypeSelection={true}
           campaignId={campaign?.id}
         />
       )}
@@ -909,12 +893,6 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
           onDelete={handleDeleteCharacter}
           organisations={organisations}
           campaignId={campaign?.id}
-          onAddToOrg={async (characterId, orgId) => {
-            await addMember.mutateAsync({ characterId, organisationId: orgId })
-          }}
-          onRemoveFromOrg={async (characterId, orgId) => {
-            await removeMember.mutateAsync({ characterId, organisationId: orgId })
-          }}
         />
       )}
 

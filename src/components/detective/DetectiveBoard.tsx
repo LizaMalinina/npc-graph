@@ -25,18 +25,6 @@ function getRandomRotation(id: string): number {
   return (hash % 21) - 10 // -10 to 10 degrees
 }
 
-// Get pin color based on relationship to player group
-function getPinColor(status: string): string {
-  switch (status) {
-    case 'dead':
-      return '#dc2626' // red
-    case 'unknown':
-      return '#6366f1' // indigo/purple
-    default:
-      return '#fbbf24' // yellow
-  }
-}
-
 // Calculate string path between two points with a natural curve
 function calculateStringPath(
   x1: number, y1: number, 
@@ -806,8 +794,8 @@ export default function DetectiveBoard({
               style={{ backgroundColor: node.pinColor || '#9ca3af' }}
             />
 
-            {/* Photo frame */}
-            <div className={`photo-frame aspect-${node.imageCrop?.aspectRatio || 'full'}`}>
+            {/* Photo frame - always portrait aspect ratio */}
+            <div className="photo-frame aspect-portrait">
               <img
                 src={node.imageUrl || getPlaceholderAvatar(node.name)}
                 alt={node.name}

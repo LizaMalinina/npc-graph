@@ -15,3 +15,14 @@ export function getEntityType(id: string): 'organisation' | 'character' {
   if (id.startsWith('org-')) return 'organisation'
   return 'character'
 }
+
+// Generate URL-friendly slug from name
+export function generateSlug(name: string, maxLength = 50): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .substring(0, maxLength) // Limit length
+}

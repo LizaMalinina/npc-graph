@@ -2,7 +2,8 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 
-export type AspectRatio = 'full' | 'square' | 'portrait' | 'landscape'
+// All images use portrait aspect ratio (3:4)
+export type AspectRatio = 'portrait'
 
 export interface CropSettings {
   zoom: number
@@ -22,19 +23,14 @@ const DEFAULT_CROP_SETTINGS: CropSettings = {
   zoom: 1,
   offsetX: 0,
   offsetY: 0,
-  aspectRatio: 'full',
+  aspectRatio: 'portrait',
 }
 
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 4
 
-// Aspect ratio dimensions (percentages of container)
-const ASPECT_RATIOS: Record<AspectRatio, { width: number; height: number }> = {
-  full: { width: 100, height: 100 },
-  square: { width: 80, height: 80 },
-  portrait: { width: 65, height: 90 },
-  landscape: { width: 95, height: 65 },
-}
+// Portrait crop area (3:4 aspect ratio)
+const CROP_DIMENSIONS = { width: 75, height: 100 }
 
 export default function ImageCropper({
   imageUrl,
@@ -47,9 +43,8 @@ export default function ImageCropper({
     x: initialCropSettings?.offsetX ?? DEFAULT_CROP_SETTINGS.offsetX,
     y: initialCropSettings?.offsetY ?? DEFAULT_CROP_SETTINGS.offsetY,
   })
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>(
-    initialCropSettings?.aspectRatio ?? DEFAULT_CROP_SETTINGS.aspectRatio!
-  )
+  // Always portrait - no user selection
+  const aspectRatio: AspectRatio = 'portrait'
   
   const containerRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
@@ -161,9 +156,6 @@ export default function ImageCropper({
     })
   }, [onChange, zoom, offset, aspectRatio])
 
-  // Get current crop area dimensions
-  const cropDimensions = ASPECT_RATIOS[aspectRatio]
-
   // Global mouse up handler
   useEffect(() => {
     const handleGlobalMouseUp = () => {
@@ -181,12 +173,12 @@ export default function ImageCropper({
       >
         <h3 className="text-lg font-bold text-white mb-4">Adjust Image</h3>
         
-        {/* Image preview with crop area */}
+        {/* Image preview with crop area - portrait aspect ratio (3:4) */}
         <div className="relative mb-4">
           <div 
             ref={containerRef}
             data-testid="image-container"
-            className="relative w-full aspect-square bg-gray-900 rounded-lg overflow-hidden cursor-move touch-none"
+            className="relative w-full aspect-[3/4] bg-gray-900 rounded-lg overflow-hidden cursor-move touch-none"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -207,87 +199,28 @@ export default function ImageCropper({
               draggable={false}
             />
             
-            {/* Crop overlay - darkens area outside crop zone (only show if not full) */}
-            {aspectRatio !== 'full' && (
-              <div className="absolute inset-0 pointer-events-none">
-                {/* Semi-transparent overlay */}
-                <div className="absolute inset-0 bg-black/40" />
-                {/* Visible crop area */}
-                <div 
-                  data-testid="crop-area"
-                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-transparent transition-all duration-200"
-                  style={{
-                    width: `${cropDimensions.width}%`,
-                    height: `${cropDimensions.height}%`,
-                    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.4)',
-                    border: '2px solid white',
-                    borderRadius: '4px',
-                  }}
-                />
-              </div>
-            )}
+            {/* Portrait crop overlay - always visible */}
+            <div className="absolute inset-0 pointer-events-none">
+              {/* Semi-transparent overlay */}
+              <div className="absolute inset-0 bg-black/40" />
+              {/* Visible crop area (portrait 3:4) */}
+              <div 
+                data-testid="crop-area"
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-transparent"
+                style={{
+                  width: `${CROP_DIMENSIONS.width}%`,
+                  height: `${CROP_DIMENSIONS.height}%`,
+                  boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.4)',
+                  border: '2px solid white',
+                  borderRadius: '4px',
+                }}
+              />
+            </div>
             
             {/* Drag hint */}
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-2 py-1 rounded">
               Drag to move
             </div>
-          </div>
-        </div>
-        
-        {/* Aspect ratio selector */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Crop Shape
-          </label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setAspectRatio('full')}
-              className={`flex-1 px-2 py-2 rounded-md border-2 transition-colors flex flex-col items-center gap-1 ${
-                aspectRatio === 'full'
-                  ? 'border-blue-500 bg-blue-500/20 text-white'
-                  : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
-              }`}
-            >
-              <div className="w-6 h-6 border-2 border-current rounded-sm flex items-center justify-center text-[8px]">✓</div>
-              <span className="text-xs">Full</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setAspectRatio('square')}
-              className={`flex-1 px-2 py-2 rounded-md border-2 transition-colors flex flex-col items-center gap-1 ${
-                aspectRatio === 'square'
-                  ? 'border-blue-500 bg-blue-500/20 text-white'
-                  : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
-              }`}
-            >
-              <div className="w-5 h-5 border-2 border-current rounded-sm" />
-              <span className="text-xs">Square</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setAspectRatio('portrait')}
-              className={`flex-1 px-2 py-2 rounded-md border-2 transition-colors flex flex-col items-center gap-1 ${
-                aspectRatio === 'portrait'
-                  ? 'border-blue-500 bg-blue-500/20 text-white'
-                  : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
-              }`}
-            >
-              <div className="w-4 h-6 border-2 border-current rounded-sm" />
-              <span className="text-xs">Portrait</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setAspectRatio('landscape')}
-              className={`flex-1 px-2 py-2 rounded-md border-2 transition-colors flex flex-col items-center gap-1 ${
-                aspectRatio === 'landscape'
-                  ? 'border-blue-500 bg-blue-500/20 text-white'
-                  : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
-              }`}
-            >
-              <div className="w-7 h-4 border-2 border-current rounded-sm" />
-              <span className="text-xs">Landscape</span>
-            </button>
           </div>
         </div>
         
