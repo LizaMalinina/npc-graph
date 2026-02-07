@@ -11,28 +11,51 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// User model for authentication
+// User model for OAuth authentication (Microsoft Entra, Google, etc.)
+// PII is stored in the OAuth provider, we only keep the provider ID and role locally
 model User {
   id        String   @id @default(cuid())
+  visitorId String   @unique           // OAuth provider ID (Entra OID, Google sub, etc.)
   name      String?
   email     String   @unique
-  password  String   // Hashed password
   role      String   @default("viewer") // viewer, editor, admin
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  // Campaigns this user can edit (for editors)
+  editableCampaigns CampaignEditor[]
+  // Campaigns created by this user
+  createdCampaigns  Campaign[]        @relation("CampaignCreator")
+}
+
+// Many-to-many relationship between editors and campaigns
+model CampaignEditor {
+  id         String   @id @default(cuid())
+  campaignId String
+  userId     String
+  createdAt  DateTime @default(now())
+  
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([campaignId, userId])
 }
 
 // Campaign model - organizes Characters, Organisations, and relationships
 model Campaign {
-  id            String         @id @default(cuid())
-  slug          String         @unique
+  id            String           @id @default(cuid())
+  slug          String           @unique
   name          String
   description   String?
   imageUrl      String?
-  imageCrop     String?        // JSON string for crop settings {zoom, offsetX, offsetY, aspectRatio}
-  isActive      Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  imageCrop     String?          // JSON string for crop settings {zoom, offsetX, offsetY, aspectRatio}
+  isActive      Boolean          @default(true)
+  creatorId     String?          // User who created this campaign
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  
+  creator       User?            @relation("CampaignCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  editors       CampaignEditor[]
   characters    Character[]
   organisations Organisation[]
 }
@@ -89,4 +112,13 @@ model UniversalRelationship {
   updatedAt      DateTime @updatedAt
 
   @@unique([fromEntityId, fromEntityType, toEntityId, toEntityType, type])
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

@@ -88,6 +88,8 @@ export interface Campaign {
     characters: number
     organisations: number
   }
+  /** Whether the current user can edit this campaign (set by API) */
+  canEdit?: boolean
 }
 
 // ==========================================
@@ -132,6 +134,21 @@ export interface GraphData {
   nodes: GraphNode[]
   links: GraphLink[]
   organisations?: Organisation[]
+}
+
+// ==========================================
+// Node Position Types (for persisting positions)
+// ==========================================
+
+export interface NodePositionUpdate {
+  nodeId: string
+  entityType: EntityType
+  posX: number
+  posY: number
+}
+
+export interface NodePositionsPayload {
+  positions: NodePositionUpdate[]
 }
 
 export interface FilterState {

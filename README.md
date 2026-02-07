@@ -23,9 +23,47 @@ A web application for managing and visualizing NPC (Non-Playable Character) rela
 |----------|-------------|----------|
 | `DATABASE_URL` | PostgreSQL connection string (pooled) | Yes (prod) |
 | `DIRECT_URL` | PostgreSQL direct connection for migrations | Yes (prod) |
+| `NEXTAUTH_URL` | Base URL for authentication (e.g., `http://localhost:3000`) | Yes |
+| `NEXTAUTH_SECRET` | Secret for encrypting session tokens | Yes |
+| `ENTRA_TENANT_ID` | Microsoft Entra External ID tenant ID | Yes |
+| `ENTRA_CLIENT_ID` | Microsoft Entra app client ID | Yes |
+| `ENTRA_CLIENT_SECRET` | Microsoft Entra app client secret | Yes |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID (optional) | No |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret (optional) | No |
 | `AZURE_STORAGE_CONNECTION_STRING` | Azure Blob Storage connection | For images |
 | `AZURE_STORAGE_CONTAINER_NAME` | Blob container name (default: `npc-images`) | For images |
 | `NODE_ENV` | Environment (`development` / `production`) | No |
+
+## Authentication
+
+Character Web uses **Microsoft Entra External ID** for authentication, allowing external users (not just your organization) to sign in.
+
+### Supported Sign-in Methods
+
+When you click "Sign in with Microsoft", the following options are available on Microsoft's login page:
+- **Microsoft Account** - Personal or work Microsoft accounts
+- **Email One-Time Passcode** - Sign in with any email address via OTP
+- **Google** - Sign in with Google (configured in Entra External Identities)
+
+### Role-Based Access Control (RBAC)
+
+| Role | Permissions |
+|------|-------------|
+| **Viewer** | View all campaigns (default, no login required) |
+| **Editor** | Edit assigned campaigns, persist node positions |
+| **Admin** | Full access to all campaigns and user management |
+
+- The **first user** to sign in automatically becomes an **Admin**
+- Subsequent users are assigned **Viewer** role by default
+- Admins can promote users to Editor or Admin roles
+
+### Setting up Authentication
+
+1. Create a **Microsoft Entra External ID** tenant in Azure Portal
+2. Register an application with redirect URI: `http://localhost:3000/api/auth/callback/microsoft-entra-id`
+3. Configure identity providers (Microsoft, Google, Email OTP) in External Identities
+4. Create a user flow for sign-up and sign-in
+5. Copy the Tenant ID, Client ID, and Client Secret to `.env.local`
 
 ## Architecture
 
@@ -356,13 +394,15 @@ npm run dev
 
 ## Future Enhancements
 
-- [ ] Full authentication with NextAuth.js
 - [ ] Export/Import data (JSON/CSV)
 - [ ] Collaborative real-time editing
 - [ ] Timeline view for relationship changes
 
 ## Completed Features
 
+- [x] Full authentication with NextAuth.js and Microsoft Entra External ID
+- [x] RBAC with Viewer, Editor, and Admin roles
+- [x] Multi-provider auth (Microsoft, Google, Email OTP via Entra)
 - [x] Image upload for NPC portraits with cropping support
 - [x] Campaign management system with slug-based URLs
 - [x] Detective board visualization with yarn connections

@@ -1,8 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useMemo, useCallback, useState } from 'react'
-import { GraphData, GraphNode, FilterState, getRelationshipColor } from '@/types'
+import { GraphData, GraphNode, FilterState, getRelationshipColor, EntityType } from '@/types'
 import { getPlaceholderAvatar } from '@/lib/utils'
+
+interface PositionChange {
+  nodeId: string
+  entityType: EntityType
+  posX: number
+  posY: number
+}
 
 interface DetectiveBoardProps {
   data: GraphData
@@ -12,6 +19,7 @@ interface DetectiveBoardProps {
   multiSelectedNodeIds?: Set<string>
   onMultiSelectChange?: (nodeIds: Set<string>) => void
   isMultiSelectFilterActive?: boolean
+  onPositionChange?: (position: PositionChange) => void
 }
 
 // Get polaroid-style rotation for each node
@@ -49,6 +57,7 @@ export default function DetectiveBoard({
   multiSelectedNodeIds = new Set(),
   onMultiSelectChange,
   isMultiSelectFilterActive = false,
+  onPositionChange,
 }: DetectiveBoardProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [positions, setPositions] = useState<Map<string, { x: number; y: number }>>(new Map())
@@ -200,6 +209,7 @@ export default function DetectiveBoard({
   }, [zoom, pan])
 
   // Calculate initial positions in a circular layout with player group at center
+  // But prefer saved positions from database if available
   useEffect(() => {
     if (filteredNodes.length === 0) return
 
@@ -215,18 +225,31 @@ export default function DetectiveBoard({
     // Use functional update to avoid stale closure issues
     setPositions(prevPositions => {
       // Check if we have new nodes that don't have positions yet
-      const nodesWithoutPositions = filteredNodes.filter(n => !prevPositions.has(n.id))
+      // A node needs positioning if it's not in prevPositions AND doesn't have saved x/y
+      const nodesWithoutPositions = filteredNodes.filter(n => 
+        !prevPositions.has(n.id) && (n.x == null || n.y == null)
+      )
       
-      // If all current nodes have positions, skip
-      if (nodesWithoutPositions.length === 0) {
+      // First, add any nodes with saved positions from database
+      const nodesWithSavedPositions = filteredNodes.filter(n => 
+        !prevPositions.has(n.id) && n.x != null && n.y != null
+      )
+      
+      // If no new nodes to position and no saved positions to restore, skip
+      if (nodesWithoutPositions.length === 0 && nodesWithSavedPositions.length === 0) {
         return prevPositions
       }
 
       const newPositions = new Map<string, { x: number; y: number }>(prevPositions)
       
-      // Filter for nodes that need positioning
-      const orgsToPosition = orgNodes.filter(n => !prevPositions.has(n.id))
-      const charsToPosition = characterNodes.filter(n => !prevPositions.has(n.id))
+      // Restore saved positions from database
+      nodesWithSavedPositions.forEach(node => {
+        newPositions.set(node.id, { x: node.x!, y: node.y! })
+      })
+      
+      // Filter for nodes that need new positioning (no saved position)
+      const orgsToPosition = orgNodes.filter(n => !newPositions.has(n.id) && (n.x == null || n.y == null))
+      const charsToPosition = characterNodes.filter(n => !newPositions.has(n.id) && (n.x == null || n.y == null))
       
       // Position organisation nodes in a cluster near center (if multiple)
       if (orgsToPosition.length === 1) {
@@ -374,11 +397,25 @@ export default function DetectiveBoard({
   }, [isPanning, panStart, draggingNode, dragOffset, zoom, pan])
 
   const handleMouseUp = useCallback(() => {
+    // If a node was dragged, notify parent of the position change
+    if (draggingNode && didDrag.current && onPositionChange) {
+      const pos = positions.get(draggingNode)
+      const node = filteredNodes.find(n => n.id === draggingNode)
+      if (pos && node) {
+        onPositionChange({
+          nodeId: draggingNode,
+          entityType: node.entityType,
+          posX: pos.x,
+          posY: pos.y,
+        })
+      }
+    }
+    
     // Just clean up - click handling is done in onClick handler
     mouseDownPos.current = null
     setDraggingNode(null)
     setIsPanning(false)
-  }, [])
+  }, [draggingNode, positions, filteredNodes, onPositionChange])
 
   // Handle node click - only used for direct clicks without drag
   const handleNodeClick = useCallback((e: React.MouseEvent, node: GraphNode) => {
@@ -551,6 +588,20 @@ export default function DetectiveBoard({
       }
     }
     
+    // If a node was dragged, notify parent of the position change
+    if (draggingNode && didDrag.current && onPositionChange) {
+      const pos = positions.get(draggingNode)
+      const node = filteredNodes.find(n => n.id === draggingNode)
+      if (pos && node) {
+        onPositionChange({
+          nodeId: draggingNode,
+          entityType: node.entityType,
+          posX: pos.x,
+          posY: pos.y,
+        })
+      }
+    }
+    
     // Reset all touch state
     lastTouchDistance.current = null
     touchStartPos.current = null
@@ -558,7 +609,7 @@ export default function DetectiveBoard({
     didDrag.current = false
     setDraggingNode(null)
     setIsPanning(false)
-  }, [filteredNodes, onNodeClick, TOUCH_TAP_THRESHOLD])
+  }, [filteredNodes, onNodeClick, TOUCH_TAP_THRESHOLD, draggingNode, positions, onPositionChange])
 
   // Get connected nodes for highlighting
   const connectedNodes = useMemo(() => {

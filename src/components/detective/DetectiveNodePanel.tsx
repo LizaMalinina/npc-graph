@@ -15,6 +15,7 @@ interface DetectiveNodePanelProps {
   onDelete?: () => void
   onAddRelationship?: () => void
   onEditRelationship?: (link: GraphLink) => void
+  onViewRelationship?: (link: GraphLink) => void
   onMemberClick?: (member: GraphNode) => void
   parentOrg?: GraphNode | null
   onBackToOrg?: () => void
@@ -28,6 +29,7 @@ export default function DetectiveNodePanel({
   onDelete,
   onAddRelationship,
   onEditRelationship,
+  onViewRelationship,
   onMemberClick,
   parentOrg,
   onBackToOrg,
@@ -202,7 +204,7 @@ export default function DetectiveNodePanel({
                 <div 
                   key={rel.id} 
                   className="p-2 bg-[#2d4a3e] rounded cursor-pointer hover:bg-[#3d5a4e]"
-                  onClick={() => onEditRelationship?.(rel)}
+                  onClick={() => (onEditRelationship ?? onViewRelationship)?.(rel)}
                 >
                   <div className="flex items-center gap-2">
                     <span 
@@ -231,7 +233,7 @@ export default function DetectiveNodePanel({
                 <div 
                   key={rel.id} 
                   className="p-2 bg-[#2d4a3e] rounded cursor-pointer hover:bg-[#3d5a4e]"
-                  onClick={() => onEditRelationship?.(rel)}
+                  onClick={() => (onEditRelationship ?? onViewRelationship)?.(rel)}
                 >
                   <div className="flex items-center gap-2">
                     <span 

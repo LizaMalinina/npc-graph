@@ -9,10 +9,13 @@ import DetectiveLegend from '@/components/detective/DetectiveLegend'
 import CharacterForm from '@/components/CharacterForm'
 import OrganisationForm from '@/components/OrganisationForm'
 import RelationshipForm from '@/components/RelationshipForm'
+import RelationshipViewer from '@/components/RelationshipViewer'
 import { GraphNode, GraphLink, FilterState, Character, Organisation, GraphData, EntityType, getRelationshipColor, getRelationshipSubValue } from '@/types'
+import { useAuth } from '@/hooks/useAuth'
 import {
   useCampaignGraphData,
   useCampaign,
+  useCanEditCampaign,
   useCreateCharacter,
   useUpdateCharacter,
   useDeleteCharacter,
@@ -24,6 +27,7 @@ import {
   useDeleteRelationship,
   useAddMember,
   useRemoveMember,
+  useSaveNodePositions,
 } from '@/hooks/useApi'
 import { useMobileDetection } from '@/hooks/useMobileDetection'
 
@@ -32,8 +36,12 @@ interface CampaignBoardProps {
 }
 
 export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
-  const [userRole, setUserRole] = useState<'viewer' | 'editor' | 'admin'>('editor')
-  const canEdit = userRole === 'editor' || userRole === 'admin'
+  // Get user role from auth hook
+  const { user } = useAuth()
+  
+  // Check campaign-specific edit permission (creator or assigned editor)
+  const { data: canEditData } = useCanEditCampaign(campaignId)
+  const canEdit = canEditData?.canEdit ?? false
 
   // Mobile detection and responsive states
   const isMobile = useMobileDetection()
@@ -69,6 +77,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null)
   const [editingOrganisation, setEditingOrganisation] = useState<Organisation | null>(null)
   const [editingRelationship, setEditingRelationship] = useState<GraphLink | null>(null)
+  const [viewingRelationship, setViewingRelationship] = useState<GraphLink | null>(null)
   const [showLegend, setShowLegend] = useState(false)
   const [multiSelectedNodeIds, setMultiSelectedNodeIds] = useState<Set<string>>(new Set())
   const [isMultiSelectFilterActive, setIsMultiSelectFilterActive] = useState(false)
@@ -88,6 +97,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const deleteRelationship = useDeleteRelationship()
   const addMember = useAddMember()
   const removeMember = useRemoveMember()
+  const saveNodePositions = useSaveNodePositions()
 
   // Get organisations from graph data
   const organisations = useMemo(() => {
@@ -125,6 +135,20 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       setSelectedNode(null)
     } else {
       setSelectedNode(node)
+    }
+  }
+
+  // Handle saving node position when dragged
+  const handlePositionChange = async (position: { nodeId: string; entityType: EntityType; posX: number; posY: number }) => {
+    if (!canEdit || !campaign?.id) return
+    
+    try {
+      await saveNodePositions.mutateAsync({
+        campaignId: campaign.id,
+        positions: [position],
+      })
+    } catch (error) {
+      console.error('Failed to save node position:', error)
     }
   }
 
@@ -566,6 +590,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
             multiSelectedNodeIds={multiSelectedNodeIds}
             onMultiSelectChange={setMultiSelectedNodeIds}
             isMultiSelectFilterActive={isMultiSelectFilterActive}
+            onPositionChange={canEdit ? handlePositionChange : undefined}
           />
           
           {/* Multi-select hint overlay */}
@@ -592,6 +617,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
             onDelete={canEdit ? handleDeleteNode : undefined}
             onAddRelationship={canEdit ? handleAddRelationship : undefined}
             onEditRelationship={canEdit ? (link: GraphLink) => setEditingRelationship(link) : undefined}
+            onViewRelationship={!canEdit ? (link: GraphLink) => setViewingRelationship(link) : undefined}
             onMemberClick={(member: GraphNode) => {
               // Remember the current org before navigating to member
               if (selectedNode.entityType === 'organisation') {
@@ -714,7 +740,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
                       <div 
                         key={rel.id || idx} 
                         className="flex items-center gap-2 p-2 bg-[#2d4a3e] rounded-lg cursor-pointer hover:bg-[#3d5a4e] active:bg-[#3d5a4e]"
-                        onClick={() => setEditingRelationship(rel)}
+                        onClick={() => canEdit ? setEditingRelationship(rel) : setViewingRelationship(rel)}
                       >
                         {/* Color indicator */}
                         <div 
@@ -882,6 +908,16 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
           onSubmit={handleUpdateRelationship}
           onCancel={() => setEditingRelationship(null)}
           onDelete={handleDeleteRelationship}
+        />
+      )}
+
+      {/* View Relationship Modal (for viewers) */}
+      {viewingRelationship && (
+        <RelationshipViewer
+          relationship={viewingRelationship}
+          sourceNode={graphData?.nodes.find(n => n.id === viewingRelationship.source)}
+          targetNode={graphData?.nodes.find(n => n.id === viewingRelationship.target)}
+          onClose={() => setViewingRelationship(null)}
         />
       )}
 

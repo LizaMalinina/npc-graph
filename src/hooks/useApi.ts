@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { GraphData, Character, Organisation, GraphLink, Campaign, EntityType, CropSettings } from '@/types'
+import { GraphData, Character, Organisation, GraphLink, Campaign, EntityType, CropSettings, NodePositionUpdate } from '@/types'
 
 const API_BASE = '/api'
 
@@ -27,6 +27,18 @@ export function useCampaign(id: string) {
       return res.json()
     },
     enabled: !!id,
+  })
+}
+
+export function useCanEditCampaign(campaignId: string) {
+  return useQuery<{ canEdit: boolean }>({
+    queryKey: ['campaign-can-edit', campaignId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/campaigns/${campaignId}/can-edit`)
+      if (!res.ok) return { canEdit: false }
+      return res.json()
+    },
+    enabled: !!campaignId,
   })
 }
 
@@ -347,6 +359,25 @@ export function useDeleteRelationship() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaign-graph'], refetchType: 'active' })
+    },
+  })
+}
+
+// ============ NODE POSITIONS ============
+
+export function useSaveNodePositions() {
+  return useMutation({
+    mutationFn: async ({ campaignId, positions }: { campaignId: string; positions: NodePositionUpdate[] }) => {
+      const res = await fetch(`${API_BASE}/campaigns/${campaignId}/positions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ positions }),
+      })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to save node positions')
+      }
+      return res.json()
     },
   })
 }

@@ -12,10 +12,9 @@ services:
       - /app/.next
       # Persist SQLite database
       - ./prisma:/app/prisma
+    env_file:
+      - .env.local
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=file:./dev.db
-      - NEXTAUTH_URL=http://localhost:3000
-      - NEXTAUTH_SECRET=your-super-secret-key-change-in-production
     stdin_open: true
     tty: true

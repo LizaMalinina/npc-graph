@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { useCampaigns, useCreateCampaign, useDeleteCampaign, useUpdateCampaign } from '@/hooks/useApi'
 import { Campaign, CropSettings } from '@/types'
 import ImageCropper from '@/components/ImageCropper'
+import { AuthButton } from '@/components/AuthButton'
+import { useAuth } from '@/hooks/useAuth'
+import Link from 'next/link'
 
 export default function Home() {
   const router = useRouter()
@@ -12,6 +15,7 @@ export default function Home() {
   const createCampaign = useCreateCampaign()
   const deleteCampaign = useDeleteCampaign()
   const updateCampaign = useUpdateCampaign()
+  const { canEdit, isAdmin } = useAuth()
   
   // Create modal state
   const [showNewCampaign, setShowNewCampaign] = useState(false)
@@ -197,8 +201,21 @@ export default function Home() {
 
   return (
     <div className="campaign-select-page">
+      {/* Auth button in top right */}
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-3">
+        {isAdmin && (
+          <Link 
+            href="/admin" 
+            className="text-sm text-amber-400 hover:text-amber-300 flex items-center gap-1"
+          >
+            ⚙️ Admin
+          </Link>
+        )}
+        <AuthButton variant="desktop" />
+      </div>
+      
       <div className="campaign-header">
-        <h1>� Character Web</h1>
+        <h1>🕸 Character Web</h1>
         <p>Select a campaign or create a new one</p>
       </div>
 
@@ -212,16 +229,18 @@ export default function Home() {
               tabIndex={0}
               onKeyDown={(e) => e.key === 'Enter' && router.push(`/campaign/${campaign.slug}`)}
             >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  openEditModal(campaign)
-                }}
-                className="campaign-edit-btn"
-                title="Edit campaign"
-              >
-                ✏️
-              </button>
+              {campaign.canEdit && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openEditModal(campaign)
+                  }}
+                  className="campaign-edit-btn"
+                  title="Edit campaign"
+                >
+                  ✏️
+                </button>
+              )}
               <div className="campaign-card-icon">
                 {campaign.imageUrl ? (
                   <img 
@@ -244,17 +263,20 @@ export default function Home() {
           </div>
         ))}
 
-        <button
-          onClick={() => {
-            setCreateError(null)
-            setShowNewCampaign(true)
-          }}
-          className="campaign-card new-campaign"
-        >
-          <div className="campaign-card-icon">➕</div>
-          <h2>New Campaign</h2>
-          <p>Start a new adventure</p>
-        </button>
+        {/* Only show create button for editors/admins */}
+        {canEdit && (
+          <button
+            onClick={() => {
+              setCreateError(null)
+              setShowNewCampaign(true)
+            }}
+            className="campaign-card new-campaign"
+          >
+            <div className="campaign-card-icon">➕</div>
+            <h2>New Campaign</h2>
+            <p>Start a new adventure</p>
+          </button>
+        )}
       </div>
 
       {/* New Campaign Modal */}
