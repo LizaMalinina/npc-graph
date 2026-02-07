@@ -62,7 +62,7 @@ export default function SignInContent({ entraConfig }: SignInContentProps) {
       setProviders(p)
       setLoading(false)
     })
-  }, [])
+  }, []) 
 
   const handleSignIn = async (providerId: string) => {
     // Use redirect: true (default) for proper CSRF handling
