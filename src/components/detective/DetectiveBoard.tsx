@@ -30,7 +30,7 @@ function getRandomRotation(id: string): number {
     hash = ((hash << 5) - hash) + id.charCodeAt(i)
     hash |= 0
   }
-  return (hash % 21) - 10 // -10 to 10 degrees
+  return (hash % 7) - 3 // -3 to 3 degrees (subtle tilt)
 }
 
 // Calculate string path between two points with a natural curve

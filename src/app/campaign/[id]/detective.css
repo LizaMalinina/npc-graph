@@ -583,7 +583,7 @@
   padding: 4px 12px;
   font-weight: bold;
   font-size: 0.75rem;
-  transform: rotate(-5deg);
+  transform: rotate(-2deg);
   box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -624,7 +624,7 @@
   padding: 4px 12px;
   font-weight: bold;
   font-size: 0.65rem;
-  transform: rotate(-10deg);
+  transform: rotate(-3deg);
   box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 

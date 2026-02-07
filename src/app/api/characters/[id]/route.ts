@@ -35,21 +35,34 @@ export async function PUT(
     const { id } = await params
     const body = await request.json()
     
+    // Extract organisationId if provided (for membership update)
+    const { organisationId, ...characterData } = body
+    
+    // Update character base data
     const character = await prisma.character.update({
       where: { id },
       data: {
-        name: body.name,
-        title: body.title,
-        description: body.description,
-        imageUrl: body.imageUrl,
-        imageCrop: body.imageCrop ? JSON.stringify(body.imageCrop) : null,
-        faction: body.faction,
-        location: body.location,
-        status: body.status,
-        tags: body.tags,
-        posX: body.posX,
-        posY: body.posY,
-        campaignId: body.campaignId,
+        name: characterData.name,
+        title: characterData.title,
+        description: characterData.description,
+        imageUrl: characterData.imageUrl,
+        imageCrop: characterData.imageCrop ? JSON.stringify(characterData.imageCrop) : null,
+        faction: characterData.faction,
+        location: characterData.location,
+        status: characterData.status,
+        tags: characterData.tags,
+        posX: characterData.posX,
+        posY: characterData.posY,
+        campaignId: characterData.campaignId,
+        // Update organisation membership if organisationId is provided
+        ...(organisationId !== undefined && {
+          organisations: {
+            set: organisationId ? [{ id: organisationId }] : [],
+          },
+        }),
+      },
+      include: {
+        organisations: true,
       },
     })
     
