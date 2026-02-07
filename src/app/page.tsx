@@ -201,8 +201,8 @@ export default function Home() {
 
   return (
     <div className="campaign-select-page">
-      {/* Auth button in top right */}
-      <div className="absolute top-4 right-4 z-10 flex items-center gap-3">
+      {/* Auth section - positioned differently on mobile vs desktop */}
+      <div className="auth-section-desktop">
         {isAdmin && (
           <Link 
             href="/admin" 
@@ -212,6 +212,21 @@ export default function Home() {
           </Link>
         )}
         <AuthButton variant="desktop" />
+      </div>
+      
+      {/* Mobile auth section - shown above header */}
+      <div className="auth-section-mobile">
+        <div className="auth-section-mobile-inner">
+          {isAdmin && (
+            <Link 
+              href="/admin" 
+              className="text-sm text-amber-400 hover:text-amber-300 flex items-center gap-1"
+            >
+              ⚙️ Admin
+            </Link>
+          )}
+          <AuthButton variant="desktop" />
+        </div>
       </div>
       
       <div className="campaign-header">

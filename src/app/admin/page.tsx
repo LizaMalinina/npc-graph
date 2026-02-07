@@ -162,10 +162,10 @@ export default function AdminPage() {
   const assignableUsers = users?.filter(u => u.role !== 'viewer') || []
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
+    <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Admin Panel</h1>
+        <div className="flex items-center justify-between mb-8 flex-wrap gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold">Admin Panel</h1>
           <Link href="/" className="text-blue-400 hover:underline">
             ← Back to Home
           </Link>
@@ -177,8 +177,8 @@ export default function AdminPage() {
             User Management
           </h2>
           
-          <div className="bg-gray-800 rounded-lg overflow-hidden">
-            <table className="w-full">
+          <div className="bg-gray-800 rounded-lg overflow-x-auto">
+            <table className="w-full min-w-[600px]">
               <thead className="bg-gray-700">
                 <tr>
                   <th className="text-left p-3">Name</th>
