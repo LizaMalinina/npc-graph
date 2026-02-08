@@ -104,6 +104,11 @@ erDiagram
     }
 ```
 
+**Diagram notation:**
+- `||--o{` = one-to-many (e.g., one Campaign contains many Characters)
+- `}o--o{` = many-to-many (Characters can belong to multiple Organisations)
+- `}o--||` = many-to-one (many Relationships connect to one entity)
+
 ## Quick Start with Docker
 
 ```bash
@@ -237,17 +242,15 @@ npc-graph/
 
 ## Relationship Types
 
-| Type | Color | Description |
-|------|-------|-------------|
-| Friend | 🟢 Green | Friendly relationship |
-| Enemy | 🔴 Red | Hostile relationship |
-| Family | 🟣 Purple | Family connection |
-| Ally | 🔵 Blue | Strategic alliance |
-| Rival | 🟠 Orange | Competitive relationship |
-| Romantic | 💗 Pink | Romantic relationship |
-| Business | 🟡 Yellow | Business/trade |
-| Mentor | 🩵 Teal | Teacher/student |
-| Servant | ⚫ Gray | Service relationship |
+The system uses 3 core relationship types with strength levels (1-5) that provide nuanced descriptions:
+
+| Type | Color | Strength 1 → 5 (Character↔Character) |
+|------|-------|--------------------------------------|
+| Friendly | 🟢 Green | Acquaintance → Colleague → Friend → Close Friend → Soulmate |
+| Hostile | 🔴 Red | Annoyed by → Dislikes → Enemy → Bitter Rival → Sworn Enemy |
+| Neutral | ⚪ Gray | Heard of → Aware of → Knows of → Familiar with → Well Acquainted |
+
+Different entity combinations (Org↔Org, Character↔Org) have their own sub-value descriptions.
 
 ## Tech Stack
 
