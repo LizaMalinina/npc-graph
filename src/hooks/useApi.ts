@@ -111,18 +111,6 @@ export function useCampaignGraphData(campaignId: string) {
 
 // ============ CHARACTERS ============
 
-export function useCharacter(id: string | null) {
-  return useQuery<Character>({
-    queryKey: ['character', id],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/characters/${id}`)
-      if (!res.ok) throw new Error('Failed to fetch character')
-      return res.json()
-    },
-    enabled: !!id,
-  })
-}
-
 export function useCreateCharacter() {
   const queryClient = useQueryClient()
   
@@ -182,18 +170,6 @@ export function useDeleteCharacter() {
 }
 
 // ============ ORGANISATIONS ============
-
-export function useOrganisation(id: string | null) {
-  return useQuery<Organisation>({
-    queryKey: ['organisation', id],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/organisations/${id}`)
-      if (!res.ok) throw new Error('Failed to fetch organisation')
-      return res.json()
-    },
-    enabled: !!id,
-  })
-}
 
 export function useCreateOrganisation() {
   const queryClient = useQueryClient()

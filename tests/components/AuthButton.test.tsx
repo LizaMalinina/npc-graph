@@ -94,16 +94,11 @@ describe('AuthButton Component', () => {
       expect(screen.getByText('T')).toBeInTheDocument()
     })
 
-    it('should show user role', () => {
+    it('should show user role for editors', () => {
       render(<AuthButton />)
       
-      expect(screen.getByText(/editor/i)).toBeInTheDocument()
-    })
-
-    it('should show edit indicator for editors', () => {
-      render(<AuthButton />)
-      
-      expect(screen.getByText(/✏️/)).toBeInTheDocument()
+      // Editor no longer shows role badge (only viewers do)
+      expect(screen.queryByText(/editor/i)).not.toBeInTheDocument()
     })
 
     it('should show sign out button', () => {
@@ -114,14 +109,14 @@ describe('AuthButton Component', () => {
   })
 
   describe('Role Display', () => {
-    it('should show admin role with correct styling', () => {
+    it('should NOT show role badge for admin (indicated by Admin link instead)', () => {
       mockUseSession.mockReturnValue({
         data: {
           user: {
             id: 'user-123',
             azureId: 'azure-123',
-            email: 'admin@example.com',
-            name: 'Admin User',
+            email: 'superuser@example.com',
+            name: 'Super User',
             role: 'admin',
           },
           expires: '2099-12-31T23:59:59.999Z',
@@ -132,11 +127,12 @@ describe('AuthButton Component', () => {
 
       render(<AuthButton />)
       
-      const roleElement = screen.getByText(/admin/i)
-      expect(roleElement).toHaveClass('auth-button__role--admin')
+      // Admin doesn't show a role-text element
+      expect(screen.queryByText('Viewer')).not.toBeInTheDocument()
+      expect(screen.queryByText('Editor')).not.toBeInTheDocument()
     })
 
-    it('should show viewer role without edit indicator', () => {
+    it('should show Viewer text for viewer role', () => {
       mockUseSession.mockReturnValue({
         data: {
           user: {
@@ -154,8 +150,7 @@ describe('AuthButton Component', () => {
 
       render(<AuthButton />)
       
-      const roleElement = screen.getByText(/viewer/i)
-      expect(roleElement).not.toHaveTextContent('✏️')
+      expect(screen.getByText('Viewer')).toBeInTheDocument()
     })
   })
 })
