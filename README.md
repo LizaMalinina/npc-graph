@@ -284,7 +284,3 @@ npm run dev
 # Run tests
 npm test
 ```
-
-## License
-
-MIT
