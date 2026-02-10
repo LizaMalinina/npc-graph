@@ -250,4 +250,21 @@ describe('RelationshipViewer Component', () => {
       })
     })
   })
+
+  describe('Mobile z-index', () => {
+    it('should have z-index higher than mobile bottom sheet (z-200)', () => {
+      const { container } = render(
+        <RelationshipViewer
+          relationship={mockRelationship}
+          sourceNode={mockSourceNode}
+          targetNode={mockTargetNode}
+          onClose={mockOnClose}
+        />
+      )
+
+      // The modal overlay should have z-index class higher than 200
+      const overlay = container.querySelector('.fixed.inset-0')
+      expect(overlay).toHaveClass('z-[250]')
+    })
+  })
 })

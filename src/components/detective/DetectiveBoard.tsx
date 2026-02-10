@@ -193,7 +193,7 @@ export default function DetectiveBoard({
       
       // Calculate zoom
       const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1
-      const newZoom = Math.max(0.3, Math.min(3, zoom * zoomFactor))
+      const newZoom = Math.max(0.1, Math.min(3, zoom * zoomFactor))
       
       // Adjust pan to zoom towards mouse position
       const zoomRatio = newZoom / zoom
@@ -503,7 +503,7 @@ export default function DetectiveBoard({
       
       if (lastTouchDistance.current !== null) {
         const scale = distance / lastTouchDistance.current
-        const newZoom = Math.max(0.3, Math.min(3, zoom * scale))
+        const newZoom = Math.max(0.1, Math.min(3, zoom * scale))
         
         // Center of pinch
         const centerX = (touch1.clientX + touch2.clientX) / 2

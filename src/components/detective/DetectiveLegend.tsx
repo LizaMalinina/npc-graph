@@ -14,7 +14,7 @@ export default function DetectiveLegend({ onClose, organisations = [], isMobile 
   
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]" onClick={onClose}>
-      <div className="bg-[#1a2f27] rounded-lg p-6 max-w-md border border-[#3d5a4e] shadow-xl" onClick={e => e.stopPropagation()}>
+      <div className="bg-[#1a2f27] rounded-lg p-6 max-w-md max-h-[80vh] overflow-y-auto border border-[#3d5a4e] shadow-xl" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex justify-between items-center mb-5 pb-3 border-b-2 border-[#3d5a4e]">
           <h3 className="text-xl font-bold text-[#b8860b]">📋 Legend</h3>
@@ -28,7 +28,7 @@ export default function DetectiveLegend({ onClose, organisations = [], isMobile 
           <h4 className="text-base font-bold text-[#a7f3d0] mb-3 uppercase tracking-wide">
             📌 Pin Colors
           </h4>
-          <div className="flex flex-col gap-2 pl-2 bg-black/20 rounded-lg p-3">
+          <div className="flex flex-col gap-2 pl-2 bg-black/20 rounded-lg p-3 max-h-48 overflow-y-auto">
             {orgsWithColors.length > 0 ? (
               orgsWithColors.map(org => (
                 <div key={org.id} className="flex items-center gap-3">

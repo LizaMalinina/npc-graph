@@ -151,6 +151,26 @@ export default function DetectiveNodePanel({
         </div>
       )}
 
+      {/* Organisations (for characters) */}
+      {!isOrganisation && node.organisations && node.organisations.length > 0 && (
+        <div className="px-4 pb-4">
+          <h3 className="text-sm font-bold text-[#b8860b] mb-2">
+            Organisation{node.organisations.length > 1 ? 's' : ''} ({node.organisations.length})
+          </h3>
+          <div className="space-y-2">
+            {node.organisations.map(org => (
+              <div 
+                key={org.id} 
+                className="flex items-center gap-2 p-2 bg-purple-600/20 rounded"
+              >
+                <span className="text-purple-300">🏛️</span>
+                <span className="text-white text-sm">{org.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Members (for organisations) */}
       {isOrganisation && node.members && node.members.length > 0 && (
         <div className="px-4 pb-4">

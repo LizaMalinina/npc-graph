@@ -28,7 +28,7 @@ export default function RelationshipViewer({
   const color = getRelationshipColor(relationship.type, relationship.strength)
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[250] p-4">
       <div className="bg-[#1a2e23] rounded-lg p-6 max-w-md w-full border border-[#3d5a4e]">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-white">Relationship Details</h2>

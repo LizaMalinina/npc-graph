@@ -48,6 +48,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [showMobileLegend, setShowMobileLegend] = useState(false)
+  const [showMobileExpandedDetails, setShowMobileExpandedDetails] = useState(false)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
 
   // Close mobile panels when selecting a node
@@ -56,6 +57,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       setShowMobileMenu(false)
       setShowMobileFilters(false)
       setShowMobileLegend(false)
+      setShowMobileExpandedDetails(false) // Reset expanded details for new node
     }
   }, [selectedNode, isMobile])
 
@@ -135,6 +137,11 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       setSelectedNode(null)
     } else {
       setSelectedNode(node)
+      // When selecting a node while filter is active, clear the filter
+      if (isMultiSelectFilterActive) {
+        setIsMultiSelectFilterActive(false)
+        setMultiSelectedNodeIds(new Set())
+      }
     }
   }
 
@@ -678,10 +685,28 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
           
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto p-3">
+            {/* Back to Organisation button (when viewing a character that belongs to an org) */}
+            {parentOrg && (
+              <button
+                onClick={() => {
+                  if (parentOrg) {
+                    setSelectedNode(parentOrg)
+                    setParentOrg(null)
+                  }
+                }}
+                className="w-full mb-3 px-3 py-2 bg-purple-600/30 text-purple-300 rounded-md hover:bg-purple-600/50 transition-colors text-sm flex items-center gap-2"
+              >
+                ← Back to {parentOrg.name}
+              </button>
+            )}
             {/* Quick info row */}
             <div className="flex gap-3 mb-3">
               {selectedNode.imageUrl && (
-                <div className="w-20 aspect-[3/4] rounded-lg overflow-hidden border-2 border-[#8b7355] flex-shrink-0">
+                <button 
+                  onClick={() => setShowMobileExpandedDetails(!showMobileExpandedDetails)}
+                  className="w-20 aspect-[3/4] rounded-lg overflow-hidden border-2 border-[#8b7355] flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[#b8860b]"
+                  aria-label="Toggle full details"
+                >
                   <img
                     src={selectedNode.imageUrl}
                     alt={selectedNode.name}
@@ -691,14 +716,26 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
                       transformOrigin: 'center',
                     } : undefined}
                   />
-                </div>
+                </button>
               )}
               <div className="flex-1 min-w-0">
                 {selectedNode.title && (
                   <p className="text-[#b8860b] text-sm italic truncate">{selectedNode.title}</p>
                 )}
                 {selectedNode.description && (
-                  <p className="text-gray-300 text-xs line-clamp-2">{selectedNode.description}</p>
+                  <div>
+                    <p className={`text-gray-300 text-xs ${showMobileExpandedDetails ? '' : 'line-clamp-2'}`}>
+                      {selectedNode.description}
+                    </p>
+                    {selectedNode.description.length > 100 && (
+                      <button
+                        onClick={() => setShowMobileExpandedDetails(!showMobileExpandedDetails)}
+                        className="text-[#b8860b] text-xs mt-1 hover:underline"
+                      >
+                        {showMobileExpandedDetails ? 'Show less' : 'Show more'}
+                      </button>
+                    )}
+                  </div>
                 )}
                 <div className="flex flex-wrap gap-1 mt-1">
                   {selectedNode.faction && (
@@ -710,6 +747,26 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
                 </div>
               </div>
             </div>
+
+            {/* Character organisations */}
+            {selectedNode.entityType === 'character' && selectedNode.organisations && selectedNode.organisations.length > 0 && (
+              <div className="mb-3">
+                <h4 className="text-xs font-bold text-[#b8860b] mb-2">
+                  Organisation{selectedNode.organisations.length > 1 ? 's' : ''} ({selectedNode.organisations.length})
+                </h4>
+                <div className="space-y-1">
+                  {selectedNode.organisations.map(org => (
+                    <div 
+                      key={org.id} 
+                      className="flex items-center gap-2 p-2 bg-purple-600/20 rounded-lg"
+                    >
+                      <span className="text-purple-300">🏛️</span>
+                      <span className="text-white text-sm">{org.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Connections - one per row, clickable */}
             {(nodeRelationships.from.length > 0 || nodeRelationships.to.length > 0) && (

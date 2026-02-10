@@ -10,7 +10,7 @@ A web application for managing and visualizing character relationships for table
 - 🔍 **Advanced Filtering** - Filter by faction, location, status, and relationship types
 - 👤 **Character Management** - Add, edit, and delete characters with detailed information
 - 🔗 **Relationship Tracking** - Create relationships between any entities with types and strengths
-- 📱 **Mobile-First Design** - Touch gestures, long-press multi-select, bottom sheet details
+- 📱 **Mobile-First Design** - Touch gestures, pinch-to-zoom (0.1x-3x), long-press multi-select, expandable bottom sheet with full details, show more/less for descriptions
 - 🔐 **Role-Based Access** - Viewer, Editor, and Admin roles
 - 💾 **Persistent Storage** - SQLite (local) or PostgreSQL (production with Neon)
 - 🐳 **Docker Support** - Run everything in containers
