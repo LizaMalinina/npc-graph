@@ -873,7 +873,42 @@ export default function DetectiveBoard({
                 clearTimeout(longPressTimer.current)
                 longPressTimer.current = null
               }
-              // Reset state - onClick will handle selection if it was a tap
+              
+              // Check if this was a tap (not a drag) and directly handle selection
+              // Don't rely on onClick which may not fire reliably on mobile
+              if (!didDrag.current && touchStartPos.current) {
+                const touch = e.changedTouches[0]
+                if (touch) {
+                  const dx = Math.abs(touch.clientX - touchStartPos.current.x)
+                  const dy = Math.abs(touch.clientY - touchStartPos.current.y)
+                  const wasTap = dx < TOUCH_TAP_THRESHOLD && dy < TOUCH_TAP_THRESHOLD
+                  
+                  if (wasTap) {
+                    // Clear multi-selection on regular tap
+                    if (onMultiSelectChange && multiSelectedNodeIds.size > 0) {
+                      onMultiSelectChange(new Set())
+                    }
+                    setSelectedNodeId(node.id)
+                    onNodeClick(node)
+                  }
+                }
+              }
+              
+              // If a node was dragged, notify parent of the position change
+              if (didDrag.current && onPositionChange) {
+                const pos = positions.get(node.id)
+                if (pos) {
+                  onPositionChange({
+                    nodeId: node.id,
+                    entityType: node.entityType,
+                    posX: pos.x,
+                    posY: pos.y,
+                  })
+                }
+              }
+              
+              // Reset state
+              didDrag.current = false
               setDraggingNode(null)
               touchStartPos.current = null
               touchNodeId.current = null
@@ -920,15 +955,13 @@ export default function DetectiveBoard({
               )}
             </div>
 
-            {/* Name label (sticky note style) - only show when selected on mobile, show on hover/select for desktop */}
-            {((isMobile && isSelected) || (!isMobile && (isHovered || isSelected))) && (
-              <div className="name-label">
-                {isOrganisation && <span className="crew-label-prefix">🏛️ </span>}
-                {isCharacter && <span className="crew-label-prefix">👤 </span>}
-                {node.name}
-                {node.title && !isMobile && <span className="title-text">{node.title}</span>}
-              </div>
-            )}
+            {/* Name label (sticky note style) - always visible */}
+            <div className="name-label">
+              {isOrganisation && <span className="crew-label-prefix">🏛️ </span>}
+              {isCharacter && <span className="crew-label-prefix">👤 </span>}
+              {node.name}
+              {node.title && !isMobile && <span className="title-text">{node.title}</span>}
+            </div>
           </div>
         )
       })}

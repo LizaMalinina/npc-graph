@@ -17,6 +17,7 @@ interface DetectiveNodePanelProps {
   onEditRelationship?: (link: GraphLink) => void
   onViewRelationship?: (link: GraphLink) => void
   onMemberClick?: (member: GraphNode) => void
+  onOrganisationClick?: (orgId: string) => void
   parentOrg?: GraphNode | null
   onBackToOrg?: () => void
 }
@@ -31,6 +32,7 @@ export default function DetectiveNodePanel({
   onEditRelationship,
   onViewRelationship,
   onMemberClick,
+  onOrganisationClick,
   parentOrg,
   onBackToOrg,
 }: DetectiveNodePanelProps) {
@@ -155,17 +157,19 @@ export default function DetectiveNodePanel({
       {!isOrganisation && node.organisations && node.organisations.length > 0 && (
         <div className="px-4 pb-4">
           <h3 className="text-sm font-bold text-[#b8860b] mb-2">
-            Organisation{node.organisations.length > 1 ? 's' : ''} ({node.organisations.length})
+            Organisation{node.organisations.length > 1 ? 's' : ''}
           </h3>
           <div className="space-y-2">
             {node.organisations.map(org => (
-              <div 
-                key={org.id} 
-                className="flex items-center gap-2 p-2 bg-purple-600/20 rounded"
+              <button 
+                key={org.id}
+                onClick={() => onOrganisationClick?.(org.id)}
+                className={`w-full flex items-center gap-2 p-2 bg-purple-600/20 rounded text-left ${onOrganisationClick ? 'cursor-pointer hover:bg-purple-600/30 transition-colors' : ''}`}
               >
                 <span className="text-purple-300">🏛️</span>
                 <span className="text-white text-sm">{org.name}</span>
-              </div>
+                {onOrganisationClick && <span className="text-purple-300 text-sm ml-auto">→</span>}
+              </button>
             ))}
           </div>
         </div>

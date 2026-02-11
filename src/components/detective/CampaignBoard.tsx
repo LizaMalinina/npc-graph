@@ -363,9 +363,11 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       {/* Header */}
       <header className="bg-[#1a2f27] border-b border-[#3d5a4e] px-4 py-3 flex items-center justify-between relative z-50">
         <div className="flex items-center gap-4">
-          <Link href="/" className="text-white hover:text-gray-300 transition-colors">
-            ← {!isMobile && 'Back'}
-          </Link>
+          {!isMobile && (
+            <Link href="/" className="text-white hover:text-gray-300 transition-colors">
+              ← Back
+            </Link>
+          )}
           <h1 className={`font-bold text-white ${isMobile ? 'text-base' : 'text-xl'}`}>{campaign?.name || 'Campaign'}</h1>
         </div>
         
@@ -632,6 +634,13 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
               }
               setSelectedNode(member)
             }}
+            onOrganisationClick={(orgId: string) => {
+              // Find the full org node from graph data
+              const fullOrgNode = graphData?.nodes.find(n => n.id === orgId && n.entityType === 'organisation')
+              if (fullOrgNode) {
+                setSelectedNode(fullOrgNode)
+              }
+            }}
             parentOrg={parentOrg}
             onBackToOrg={() => {
               if (parentOrg) {
@@ -702,49 +711,59 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
             {/* Quick info row */}
             <div className="flex gap-3 mb-3">
               {selectedNode.imageUrl && (
-                <button 
-                  onClick={() => setShowMobileExpandedDetails(!showMobileExpandedDetails)}
-                  className="w-20 aspect-[3/4] rounded-lg overflow-hidden border-2 border-[#8b7355] flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[#b8860b]"
-                  aria-label="Toggle full details"
-                >
-                  <img
-                    src={selectedNode.imageUrl}
-                    alt={selectedNode.name}
-                    className="w-full h-full object-cover"
-                    style={selectedNode.imageCrop ? {
-                      transform: `scale(${selectedNode.imageCrop.zoom}) translate(${selectedNode.imageCrop.offsetX / selectedNode.imageCrop.zoom}%, ${selectedNode.imageCrop.offsetY / selectedNode.imageCrop.zoom}%)`,
-                      transformOrigin: 'center',
-                    } : undefined}
-                  />
-                </button>
+                <div className="w-24 flex-shrink-0">
+                  <div className="aspect-[3/4] rounded-lg overflow-hidden border-2 border-[#8b7355]">
+                    <img
+                      src={selectedNode.imageUrl}
+                      alt={selectedNode.name}
+                      className="w-full h-full object-cover"
+                      style={selectedNode.imageCrop ? {
+                        transform: `scale(${selectedNode.imageCrop.zoom}) translate(${selectedNode.imageCrop.offsetX / selectedNode.imageCrop.zoom}%, ${selectedNode.imageCrop.offsetY / selectedNode.imageCrop.zoom}%)`,
+                        transformOrigin: 'center',
+                      } : undefined}
+                    />
+                  </div>
+                  {/* Tags next to image */}
+                  <div className="flex flex-col gap-1 mt-2">
+                    {selectedNode.faction && (
+                      <span className="text-sm bg-green-600/30 text-green-300 px-2 py-1 rounded text-center">{selectedNode.faction}</span>
+                    )}
+                    {selectedNode.location && (
+                      <span className="text-sm bg-blue-600/30 text-blue-300 px-2 py-1 rounded text-center">📍 {selectedNode.location}</span>
+                    )}
+                  </div>
+                </div>
               )}
               <div className="flex-1 min-w-0">
                 {selectedNode.title && (
-                  <p className="text-[#b8860b] text-sm italic truncate">{selectedNode.title}</p>
+                  <p className="text-[#b8860b] text-sm italic mb-1">{selectedNode.title}</p>
                 )}
                 {selectedNode.description && (
                   <div>
-                    <p className={`text-gray-300 text-xs ${showMobileExpandedDetails ? '' : 'line-clamp-2'}`}>
+                    <p className={`text-gray-300 text-sm leading-relaxed ${showMobileExpandedDetails ? '' : 'line-clamp-3'}`}>
                       {selectedNode.description}
                     </p>
-                    {selectedNode.description.length > 100 && (
+                    {selectedNode.description.length > 50 && (
                       <button
                         onClick={() => setShowMobileExpandedDetails(!showMobileExpandedDetails)}
-                        className="text-[#b8860b] text-xs mt-1 hover:underline"
+                        className="text-[#b8860b] text-sm mt-2 font-medium hover:underline"
                       >
-                        {showMobileExpandedDetails ? 'Show less' : 'Show more'}
+                        {showMobileExpandedDetails ? '▲ Show less' : '▼ Show more'}
                       </button>
                     )}
                   </div>
                 )}
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {selectedNode.faction && (
-                    <span className="text-xs bg-green-600/30 text-green-300 px-1.5 py-0.5 rounded">{selectedNode.faction}</span>
-                  )}
-                  {selectedNode.location && (
-                    <span className="text-xs bg-blue-600/30 text-blue-300 px-1.5 py-0.5 rounded">📍 {selectedNode.location}</span>
-                  )}
-                </div>
+                {/* Tags next to description when no image */}
+                {!selectedNode.imageUrl && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedNode.faction && (
+                      <span className="text-sm bg-green-600/30 text-green-300 px-2 py-1 rounded">{selectedNode.faction}</span>
+                    )}
+                    {selectedNode.location && (
+                      <span className="text-sm bg-blue-600/30 text-blue-300 px-2 py-1 rounded">📍 {selectedNode.location}</span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -752,18 +771,28 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
             {selectedNode.entityType === 'character' && selectedNode.organisations && selectedNode.organisations.length > 0 && (
               <div className="mb-3">
                 <h4 className="text-xs font-bold text-[#b8860b] mb-2">
-                  Organisation{selectedNode.organisations.length > 1 ? 's' : ''} ({selectedNode.organisations.length})
+                  Organisation{selectedNode.organisations.length > 1 ? 's' : ''}
                 </h4>
                 <div className="space-y-1">
-                  {selectedNode.organisations.map(org => (
-                    <div 
-                      key={org.id} 
-                      className="flex items-center gap-2 p-2 bg-purple-600/20 rounded-lg"
-                    >
-                      <span className="text-purple-300">🏛️</span>
-                      <span className="text-white text-sm">{org.name}</span>
-                    </div>
-                  ))}
+                  {selectedNode.organisations.map(org => {
+                    // Find the full org node from graph data
+                    const fullOrgNode = graphData?.nodes.find(n => n.id === org.id && n.entityType === 'organisation')
+                    return (
+                      <button
+                        key={org.id}
+                        onClick={() => {
+                          if (fullOrgNode) {
+                            setSelectedNode(fullOrgNode)
+                          }
+                        }}
+                        className="w-full flex items-center gap-2 p-2 bg-purple-600/20 rounded-lg hover:bg-purple-600/30 text-left"
+                      >
+                        <span className="text-purple-300">🏛️</span>
+                        <span className="text-white text-sm">{org.name}</span>
+                        <span className="text-purple-300 text-sm ml-auto">→</span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}
