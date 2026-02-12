@@ -787,7 +787,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
                 )}
                 {selectedNode.description && (
                   <div>
-                    <p className={`text-gray-300 text-sm leading-relaxed ${showMobileExpandedDetails ? '' : 'line-clamp-3'}`}>
+                    <p className={`text-gray-300 text-sm leading-relaxed whitespace-pre-wrap ${showMobileExpandedDetails ? '' : 'line-clamp-3'}`}>
                       {selectedNode.description}
                     </p>
                     {selectedNode.description.length > 50 && (

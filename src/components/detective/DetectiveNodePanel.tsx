@@ -142,7 +142,7 @@ export default function DetectiveNodePanel({
       {node.description && (
         <div className="px-4 pb-4">
           <h3 className="text-sm font-bold text-[#b8860b] mb-2">Description</h3>
-          <p className="text-gray-300 text-sm">
+          <p className="text-gray-300 text-sm whitespace-pre-wrap">
             {showFullDescription || node.description.length <= DESCRIPTION_THRESHOLD
               ? node.description
               : `${node.description.slice(0, DESCRIPTION_THRESHOLD)}...`}

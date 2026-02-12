@@ -155,7 +155,7 @@ function CharacterBio({ entity }: CharacterBioProps) {
       {entity.description && (
         <div className="bio-field bio-description">
           <span className="bio-label">Description:</span>
-          <p className="bio-value">{entity.description}</p>
+          <p className="bio-value whitespace-pre-wrap">{entity.description}</p>
         </div>
       )}
     </div>
@@ -175,7 +175,7 @@ function OrganisationBio({ entity }: OrganisationBioProps) {
       {entity.description && (
         <div className="bio-field bio-description">
           <span className="bio-label">Description:</span>
-          <p className="bio-value">{entity.description}</p>
+          <p className="bio-value whitespace-pre-wrap">{entity.description}</p>
         </div>
       )}
     </div>

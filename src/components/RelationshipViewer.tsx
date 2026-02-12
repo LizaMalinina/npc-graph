@@ -92,7 +92,7 @@ export default function RelationshipViewer({
             {relationship.description && (
               <div className="pt-2 border-t border-[#3d5a4e]">
                 <span className="text-gray-400 block mb-1">Description:</span>
-                <p className="text-white text-sm">{relationship.description}</p>
+                <p className="text-white text-sm whitespace-pre-wrap">{relationship.description}</p>
               </div>
             )}
           </div>
