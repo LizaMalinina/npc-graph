@@ -43,6 +43,7 @@ export default function ImageCropper({
     x: initialCropSettings?.offsetX ?? DEFAULT_CROP_SETTINGS.offsetX,
     y: initialCropSettings?.offsetY ?? DEFAULT_CROP_SETTINGS.offsetY,
   })
+  const [hasCalculatedInitialZoom, setHasCalculatedInitialZoom] = useState(!!initialCropSettings)
   // Always portrait - no user selection
   const aspectRatio: AspectRatio = 'portrait'
   
@@ -51,6 +52,31 @@ export default function ImageCropper({
   const dragStart = useRef({ x: 0, y: 0 })
   const lastPinchDistance = useRef<number | null>(null)
   const lastOffset = useRef({ x: 0, y: 0 })
+  
+  // Calculate initial zoom based on image aspect ratio to fit entire image
+  useEffect(() => {
+    // Skip if we already have initial settings or already calculated
+    if (hasCalculatedInitialZoom) return
+    
+    const img = new Image()
+    img.onload = () => {
+      const imageAspect = img.naturalWidth / img.naturalHeight
+      const containerAspect = 3 / 4 // Portrait container
+      
+      // If image is wider than container aspect ratio, zoom out to fit width
+      // If image is taller, object-cover will show full width naturally
+      if (imageAspect > containerAspect) {
+        // Calculate zoom to fit full width of landscape image
+        // The image will be displayed with object-cover which shows center height
+        // We need to zoom out so the scaled image width fits in the container
+        const fittingZoom = containerAspect / imageAspect
+        const adjustedZoom = Math.max(MIN_ZOOM, Math.min(1, fittingZoom))
+        setZoom(adjustedZoom)
+      }
+      setHasCalculatedInitialZoom(true)
+    }
+    img.src = imageUrl
+  }, [imageUrl, hasCalculatedInitialZoom])
   
   // Clamp offset to reasonable bounds (allow generous movement for positioning)
   const clampOffset = useCallback((newOffset: { x: number; y: number }) => {

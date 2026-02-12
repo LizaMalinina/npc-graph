@@ -884,6 +884,9 @@ export default function DetectiveBoard({
                   const wasTap = dx < TOUCH_TAP_THRESHOLD && dy < TOUCH_TAP_THRESHOLD
                   
                   if (wasTap) {
+                    // Prevent the synthetic click event from firing (would cause double-toggle)
+                    e.preventDefault()
+                    
                     // Clear multi-selection on regular tap
                     if (onMultiSelectChange && multiSelectedNodeIds.size > 0) {
                       onMultiSelectChange(new Set())

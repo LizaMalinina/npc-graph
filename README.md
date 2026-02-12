@@ -10,12 +10,31 @@ A web application for managing and visualizing character relationships for table
 - 🔍 **Advanced Filtering** - Filter by faction, location, status, and relationship types
 - 👤 **Character Management** - Add, edit, and delete characters with detailed information
 - 🔗 **Relationship Tracking** - Create relationships between any entities with types and strengths
-- 📱 **Mobile-First Design** - Touch gestures, pinch-to-zoom (0.1x-3x), long-press multi-select, expandable bottom sheet with full details, show more/less for descriptions
-- 🔐 **Role-Based Access** - Viewer, Editor, and Admin roles
+- 📱 **Mobile-First Design** - Touch gestures, pinch-to-zoom (0.1x-3x), long-press multi-select, expandable bottom sheet, node names always visible
+- 🔐 **Role-Based Access** - Viewer, Editor, and Admin roles with appropriate UI
 - 💾 **Persistent Storage** - SQLite (local) or PostgreSQL (production with Neon)
 - 🐳 **Docker Support** - Run everything in containers
 - ☁️ **Azure Deployment** - Ready for Azure Container Apps
 - 📸 **Image Upload** - Azure Blob Storage integration with cropping support
+
+## UI Interaction Flow
+
+### Node Selection
+1. **Click node on board** → Opens details panel (side panel on desktop, bottom sheet on mobile)
+2. **Click image in details panel** → Opens full details form:
+   - **Editors**: Edit form with all fields editable
+   - **Viewers**: Read-only view showing all character/organisation details
+
+### Organisation Dropdown (Character Form)
+- Searchable dropdown with alphabetically sorted organisations
+- Type to filter, click to select
+
+### Mobile Features
+- Tap node to select and view details
+- Long-press for multi-select mode
+- Pinch-to-zoom (0.1x - 3x)
+- Swipe/drag to pan the board
+- Bottom sheet panel with expandable description
 
 ## Environment Variables
 

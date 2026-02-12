@@ -9,8 +9,10 @@ interface DetectiveLegendProps {
 }
 
 export default function DetectiveLegend({ onClose, organisations = [], isMobile = false }: DetectiveLegendProps) {
-  // Filter to only orgs with pin colors
-  const orgsWithColors = organisations.filter(org => org.pinColor)
+  // Filter to only orgs with pin colors and sort alphabetically
+  const orgsWithColors = organisations
+    .filter(org => org.pinColor)
+    .sort((a, b) => a.name.localeCompare(b.name))
   
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]" onClick={onClose}>

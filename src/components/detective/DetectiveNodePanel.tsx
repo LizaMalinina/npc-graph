@@ -12,6 +12,7 @@ interface DetectiveNodePanelProps {
   }
   onClose: () => void
   onEdit?: () => void
+  onView?: () => void
   onDelete?: () => void
   onAddRelationship?: () => void
   onEditRelationship?: (link: GraphLink) => void
@@ -27,6 +28,7 @@ export default function DetectiveNodePanel({
   relationships,
   onClose,
   onEdit,
+  onView,
   onDelete,
   onAddRelationship,
   onEditRelationship,
@@ -38,6 +40,9 @@ export default function DetectiveNodePanel({
 }: DetectiveNodePanelProps) {
   const [showFullDescription, setShowFullDescription] = useState(false)
   const isOrganisation = node.entityType === 'organisation'
+  
+  // Image click handler - use onEdit if available, otherwise onView
+  const handleImageClick = onEdit || onView
   
   const DESCRIPTION_THRESHOLD = 150
 
@@ -70,9 +75,15 @@ export default function DetectiveNodePanel({
         </div>
       )}
 
-      {/* Photo - always portrait aspect ratio */}
+      {/* Photo - always portrait aspect ratio - clickable to edit/view */}
       <div className="p-4">
-        <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden border-4 border-[#8b7355] bg-[#2d4a3e]">
+        <div 
+          className={`relative w-full aspect-[3/4] rounded-lg overflow-hidden border-4 border-[#8b7355] bg-[#2d4a3e] ${handleImageClick ? 'cursor-pointer hover:border-[#b8860b] transition-colors' : ''}`}
+          onClick={handleImageClick}
+          role={handleImageClick ? 'button' : undefined}
+          tabIndex={handleImageClick ? 0 : undefined}
+          onKeyDown={handleImageClick ? (e) => e.key === 'Enter' && handleImageClick() : undefined}
+        >
           <img
             src={node.imageUrl || getPlaceholderAvatar(node.name, isOrganisation ? '8b5cf6' : '3b82f6')}
             alt={node.name}
@@ -85,6 +96,13 @@ export default function DetectiveNodePanel({
           {node.status === 'dead' && (
             <div className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded transform rotate-12">
               DECEASED
+            </div>
+          )}
+          {handleImageClick && (
+            <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center">
+              <span className="opacity-0 hover:opacity-100 text-white text-sm font-medium bg-black/50 px-3 py-1 rounded">
+                {onEdit ? 'Click to edit' : 'Click to view details'}
+              </span>
             </div>
           )}
         </div>

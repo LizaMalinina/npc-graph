@@ -7,7 +7,9 @@ import DetectiveFilterPanel from '@/components/detective/DetectiveFilterPanel'
 import DetectiveNodePanel from '@/components/detective/DetectiveNodePanel'
 import DetectiveLegend from '@/components/detective/DetectiveLegend'
 import CharacterForm from '@/components/CharacterForm'
+import CharacterViewer from '@/components/CharacterViewer'
 import OrganisationForm from '@/components/OrganisationForm'
+import OrganisationViewer from '@/components/OrganisationViewer'
 import RelationshipForm from '@/components/RelationshipForm'
 import RelationshipViewer from '@/components/RelationshipViewer'
 import { GraphNode, GraphLink, FilterState, Character, Organisation, GraphData, EntityType, getRelationshipColor, getRelationshipSubValue } from '@/types'
@@ -80,6 +82,8 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
   const [editingOrganisation, setEditingOrganisation] = useState<Organisation | null>(null)
   const [editingRelationship, setEditingRelationship] = useState<GraphLink | null>(null)
   const [viewingRelationship, setViewingRelationship] = useState<GraphLink | null>(null)
+  const [viewingCharacter, setViewingCharacter] = useState<Character | null>(null)
+  const [viewingOrganisation, setViewingOrganisation] = useState<Organisation | null>(null)
   const [showLegend, setShowLegend] = useState(false)
   const [multiSelectedNodeIds, setMultiSelectedNodeIds] = useState<Set<string>>(new Set())
   const [isMultiSelectFilterActive, setIsMultiSelectFilterActive] = useState(false)
@@ -137,6 +141,10 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       setSelectedNode(null)
     } else {
       setSelectedNode(node)
+      // On mobile, close legend when selecting a node (mutually exclusive panels)
+      if (isMobile) {
+        setShowLegend(false)
+      }
       // When selecting a node while filter is active, clear the filter
       if (isMultiSelectFilterActive) {
         setIsMultiSelectFilterActive(false)
@@ -331,6 +339,39 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
     }
   }
 
+  // Handle viewing from node panel (for non-editors)
+  const handleViewNode = () => {
+    if (!selectedNode) return
+    if (selectedNode.entityType === 'organisation') {
+      setViewingOrganisation({
+        id: selectedNode.id,
+        name: selectedNode.name,
+        description: selectedNode.description,
+        imageUrl: selectedNode.imageUrl,
+        imageCrop: selectedNode.imageCrop,
+        pinColor: selectedNode.pinColor,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    } else {
+      setViewingCharacter({
+        id: selectedNode.id,
+        name: selectedNode.name,
+        title: selectedNode.title,
+        description: selectedNode.description,
+        imageUrl: selectedNode.imageUrl,
+        imageCrop: selectedNode.imageCrop,
+        faction: selectedNode.faction,
+        location: selectedNode.location,
+        status: selectedNode.status || 'alive',
+        tags: selectedNode.tags?.join(', '),
+        organisations: selectedNode.organisations as Organisation[] | undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    }
+  }
+
   // Handle deleting from node panel
   const handleDeleteNode = async () => {
     if (!selectedNode) return
@@ -363,11 +404,9 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
       {/* Header */}
       <header className="bg-[#1a2f27] border-b border-[#3d5a4e] px-4 py-3 flex items-center justify-between relative z-50">
         <div className="flex items-center gap-4">
-          {!isMobile && (
-            <Link href="/" className="text-white hover:text-gray-300 transition-colors">
-              ← Back
-            </Link>
-          )}
+          <Link href="/" className="text-white hover:text-gray-300 transition-colors">
+            ← Back
+          </Link>
           <h1 className={`font-bold text-white ${isMobile ? 'text-base' : 'text-xl'}`}>{campaign?.name || 'Campaign'}</h1>
         </div>
         
@@ -438,7 +477,10 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
           {/* Mobile menu button */}
           {isMobile && (
             <button
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              onClick={() => {
+                setShowMobileMenu(!showMobileMenu)
+                setSelectedNode(null) // Close details panel when opening menu
+              }}
               className="px-3 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-500 text-sm"
             >
               ☰
@@ -535,6 +577,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
               <button
                 onClick={() => {
                   setShowLegend(true)
+                  setSelectedNode(null) // Close details panel when opening legend
                   setShowMobileMenu(false)
                 }}
                 className="w-full px-3 py-2 bg-gray-700 text-white rounded-md text-sm text-left"
@@ -623,6 +666,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
               setParentOrg(null)
             }}
             onEdit={canEdit ? handleEditNode : undefined}
+            onView={!canEdit ? handleViewNode : undefined}
             onDelete={canEdit ? handleDeleteNode : undefined}
             onAddRelationship={canEdit ? handleAddRelationship : undefined}
             onEditRelationship={canEdit ? (link: GraphLink) => setEditingRelationship(link) : undefined}
@@ -712,7 +756,10 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
             <div className="flex gap-3 mb-3">
               {selectedNode.imageUrl && (
                 <div className="w-24 flex-shrink-0">
-                  <div className="aspect-[3/4] rounded-lg overflow-hidden border-2 border-[#8b7355]">
+                  <button
+                    onClick={canEdit ? handleEditNode : handleViewNode}
+                    className="w-full aspect-[3/4] rounded-lg overflow-hidden border-2 border-[#8b7355] hover:border-[#b8860b] cursor-pointer transition-colors"
+                  >
                     <img
                       src={selectedNode.imageUrl}
                       alt={selectedNode.name}
@@ -722,7 +769,7 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
                         transformOrigin: 'center',
                       } : undefined}
                     />
-                  </div>
+                  </button>
                   {/* Tags next to image */}
                   <div className="flex flex-col gap-1 mt-2">
                     {selectedNode.faction && (
@@ -1004,6 +1051,45 @@ export default function CampaignBoard({ campaignId }: CampaignBoardProps) {
           sourceNode={graphData?.nodes.find(n => n.id === viewingRelationship.source)}
           targetNode={graphData?.nodes.find(n => n.id === viewingRelationship.target)}
           onClose={() => setViewingRelationship(null)}
+        />
+      )}
+
+      {/* View Character Modal (for viewers) */}
+      {viewingCharacter && (
+        <CharacterViewer
+          character={viewingCharacter}
+          organisations={organisations}
+          onClose={() => setViewingCharacter(null)}
+        />
+      )}
+
+      {/* View Organisation Modal (for viewers) */}
+      {viewingOrganisation && (
+        <OrganisationViewer
+          organisation={viewingOrganisation}
+          members={graphData?.nodes.filter(n => 
+            n.entityType === 'character' && 
+            n.organisations?.some(o => o.id === viewingOrganisation.id)
+          ) || []}
+          onClose={() => setViewingOrganisation(null)}
+          onMemberClick={(member) => {
+            setViewingOrganisation(null)
+            setViewingCharacter({
+              id: member.id,
+              name: member.name,
+              title: member.title,
+              description: member.description,
+              imageUrl: member.imageUrl,
+              imageCrop: member.imageCrop,
+              faction: member.faction,
+              location: member.location,
+              status: member.status || 'alive',
+              tags: member.tags?.join(', '),
+              organisations: member.organisations as Organisation[] | undefined,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            })
+          }}
         />
       )}
 

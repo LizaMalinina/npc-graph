@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { Character, Organisation, CHARACTER_STATUSES, CropSettings } from '@/types'
 import ImageCropper from '@/components/ImageCropper'
 
@@ -29,6 +29,41 @@ export default function CharacterForm({
   // Get first organisation if character has any memberships
   const initialOrgId = character?.organisations?.[0]?.id || ''
   const [selectedOrgId, setSelectedOrgId] = useState<string>(initialOrgId)
+  const [orgSearchQuery, setOrgSearchQuery] = useState('')
+  const [showOrgDropdown, setShowOrgDropdown] = useState(false)
+  const orgDropdownRef = useRef<HTMLDivElement>(null)
+  
+  // Sort organisations alphabetically and filter by search
+  const filteredOrganisations = useMemo(() => {
+    const sorted = [...organisations].sort((a, b) => 
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    )
+    if (!orgSearchQuery.trim()) return sorted
+    const query = orgSearchQuery.toLowerCase()
+    return sorted.filter(org => org.name.toLowerCase().includes(query))
+  }, [organisations, orgSearchQuery])
+  
+  // Get the selected organisation name for display
+  const selectedOrgName = useMemo(() => {
+    if (!selectedOrgId) return 'None'
+    const org = organisations.find(o => o.id === selectedOrgId)
+    return org?.name || 'None'
+  }, [selectedOrgId, organisations])
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (orgDropdownRef.current && !orgDropdownRef.current.contains(event.target as Node)) {
+        setShowOrgDropdown(false)
+        setOrgSearchQuery('')
+      }
+    }
+    
+    if (showOrgDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showOrgDropdown])
   
   const [formData, setFormData] = useState({
     name: character?.name || '',
@@ -136,25 +171,76 @@ export default function CharacterForm({
             />
           </div>
 
-          {/* Organisation - optional dropdown */}
+          {/* Organisation - searchable dropdown */}
           {organisations.length > 0 && (
-            <div>
+            <div ref={orgDropdownRef} className="relative">
               <label htmlFor="char-organisation" className="block text-sm font-medium text-gray-300 mb-1">
                 Organisation
               </label>
-              <select
+              <button
+                type="button"
                 id="char-organisation"
-                value={selectedOrgId}
-                onChange={(e) => setSelectedOrgId(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                onClick={() => setShowOrgDropdown(!showOrgDropdown)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-left flex items-center justify-between"
               >
-                <option value="">None</option>
-                {organisations.map(org => (
-                  <option key={org.id} value={org.id}>
-                    {org.name}
-                  </option>
-                ))}
-              </select>
+                <span>{selectedOrgName}</span>
+                <span className="text-gray-400">{showOrgDropdown ? '▲' : '▼'}</span>
+              </button>
+              
+              {showOrgDropdown && (
+                <div className="absolute z-50 w-full mt-1 bg-gray-700 border border-gray-600 rounded-md shadow-lg max-h-60 overflow-hidden">
+                  {/* Search input */}
+                  <div className="p-2 border-b border-gray-600">
+                    <input
+                      type="text"
+                      placeholder="Search organisations..."
+                      value={orgSearchQuery}
+                      onChange={(e) => setOrgSearchQuery(e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-500 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  
+                  {/* Options list */}
+                  <div className="max-h-44 overflow-y-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedOrgId('')
+                        setShowOrgDropdown(false)
+                        setOrgSearchQuery('')
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-600 ${
+                        selectedOrgId === '' ? 'bg-purple-600 text-white' : 'text-gray-300'
+                      }`}
+                    >
+                      None
+                    </button>
+                    {filteredOrganisations.map(org => (
+                      <button
+                        type="button"
+                        key={org.id}
+                        onClick={() => {
+                          setSelectedOrgId(org.id)
+                          setShowOrgDropdown(false)
+                          setOrgSearchQuery('')
+                        }}
+                        className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-600 ${
+                          selectedOrgId === org.id ? 'bg-purple-600 text-white' : 'text-gray-300'
+                        }`}
+                      >
+                        {org.name}
+                      </button>
+                    ))}
+                    {filteredOrganisations.length === 0 && orgSearchQuery && (
+                      <div className="px-3 py-2 text-gray-400 text-sm italic">
+                        No organisations found
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

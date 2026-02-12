@@ -208,8 +208,8 @@ describe('Mobile Character Organisation Display', () => {
       />
     )
     
-    // Look for the section header specifically (contains count in parentheses)
-    expect(screen.getByText(/Organisation.*\(1\)/)).toBeInTheDocument()
+    // Look for the section header (count is no longer shown)
+    expect(screen.getByText('Organisation')).toBeInTheDocument()
   })
 })
 

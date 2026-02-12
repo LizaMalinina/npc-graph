@@ -112,9 +112,12 @@ describe('CharacterForm Component', () => {
       // Fill required name field
       fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Guild Member' } })
       
-      // Select an organisation
-      const orgSelect = screen.getByLabelText(/organisation/i)
-      fireEvent.change(orgSelect, { target: { value: 'org-1' } })
+      // Open organisation dropdown and select an organisation
+      const orgButton = screen.getByLabelText(/organisation/i)
+      fireEvent.click(orgButton)
+      
+      // Click on the organisation option
+      fireEvent.click(screen.getByRole('button', { name: 'The Guild' }))
       
       // Submit
       fireEvent.click(screen.getByRole('button', { name: /create|save/i }))
@@ -127,7 +130,7 @@ describe('CharacterForm Component', () => {
       )
     })
 
-    it('should show all organisation options plus None', () => {
+    it('should show all organisation options plus None in alphabetical order', () => {
       render(
         <CharacterForm
           onSubmit={mockOnSubmit}
@@ -136,14 +139,44 @@ describe('CharacterForm Component', () => {
         />
       )
       
-      const orgSelect = screen.getByLabelText(/organisation/i)
-      const options = orgSelect.querySelectorAll('option')
+      // Open the dropdown
+      const orgButton = screen.getByLabelText(/organisation/i)
+      fireEvent.click(orgButton)
       
-      // Should have None + all organisations
-      expect(options).toHaveLength(3) // None + 2 orgs
+      // Should have None + all organisations (sorted alphabetically)
+      expect(screen.getByRole('button', { name: 'None' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'The Guild' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'The Order' })).toBeInTheDocument()
+      
+      // Check alphabetical order: The Guild, The Order
+      const options = screen.getAllByRole('button').filter(b => 
+        ['None', 'The Guild', 'The Order'].includes(b.textContent || '')
+      )
       expect(options[0]).toHaveTextContent('None')
       expect(options[1]).toHaveTextContent('The Guild')
       expect(options[2]).toHaveTextContent('The Order')
+    })
+
+    it('should filter organisations when searching', () => {
+      render(
+        <CharacterForm
+          onSubmit={mockOnSubmit}
+          onCancel={mockOnCancel}
+          organisations={mockOrganisations}
+        />
+      )
+      
+      // Open the dropdown
+      const orgButton = screen.getByLabelText(/organisation/i)
+      fireEvent.click(orgButton)
+      
+      // Type in search
+      const searchInput = screen.getByPlaceholderText(/search organisations/i)
+      fireEvent.change(searchInput, { target: { value: 'Guild' } })
+      
+      // Should show only matching organisation
+      expect(screen.getByRole('button', { name: 'The Guild' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'The Order' })).not.toBeInTheDocument()
     })
   })
 
@@ -190,8 +223,9 @@ describe('CharacterForm Component', () => {
         />
       )
       
-      const orgSelect = screen.getByLabelText(/organisation/i) as HTMLSelectElement
-      expect(orgSelect.value).toBe('org-1')
+      // The dropdown button should show the pre-selected organisation name
+      const orgButton = screen.getByLabelText(/organisation/i)
+      expect(orgButton).toHaveTextContent('The Guild')
     })
   })
 })
