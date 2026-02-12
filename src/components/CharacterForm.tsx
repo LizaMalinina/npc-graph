@@ -79,8 +79,14 @@ export default function CharacterForm({
   })
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('handleFileUpload called', e.target.files)
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file) {
+      console.log('No file selected')
+      return
+    }
+    
+    console.log('Uploading file:', file.name, file.type, file.size)
 
     setIsUploading(true)
     setUploadError(null)
@@ -89,12 +95,15 @@ export default function CharacterForm({
       const formDataUpload = new FormData()
       formDataUpload.append('file', file)
 
+      console.log('Sending POST to /api/upload')
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formDataUpload,
       })
 
+      console.log('Response status:', response.status)
       const data = await response.json()
+      console.log('Response data:', data)
 
       if (!response.ok) {
         throw new Error(data.error || 'Upload failed')
@@ -104,6 +113,7 @@ export default function CharacterForm({
       // Open cropper after upload
       setShowImageCropper(true)
     } catch (error) {
+      console.error('Upload error:', error)
       setUploadError(error instanceof Error ? error.message : 'Upload failed')
     } finally {
       setIsUploading(false)
