@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { Organisation, CropSettings } from '@/types'
 import ImageCropper from '@/components/ImageCropper'
 
@@ -23,6 +23,42 @@ export const PIN_COLORS = [
 // Helper to validate hex color
 function isValidHexColor(color: string): boolean {
   return /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/.test(color)
+}
+
+// Generate a random hex color that's not in the used set
+function generateRandomColor(usedColors: Set<string | undefined>): { value: string; label: string } {
+  const hue = Math.floor(Math.random() * 360)
+  const saturation = 65 + Math.floor(Math.random() * 25) // 65-90%
+  const lightness = 45 + Math.floor(Math.random() * 15) // 45-60%
+  
+  // Convert HSL to hex
+  const h = hue / 360
+  const s = saturation / 100
+  const l = lightness / 100
+  
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1
+    if (t > 1) t -= 1
+    if (t < 1/6) return p + (q - p) * 6 * t
+    if (t < 1/2) return q
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6
+    return p
+  }
+  
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s
+  const p = 2 * l - q
+  const r = Math.round(hue2rgb(p, q, h + 1/3) * 255)
+  const g = Math.round(hue2rgb(p, q, h) * 255)
+  const b = Math.round(hue2rgb(p, q, h - 1/3) * 255)
+  
+  const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+  
+  // Check if this color is too similar to used colors (simple check)
+  if (usedColors.has(hex.toLowerCase())) {
+    return generateRandomColor(usedColors) // Try again
+  }
+  
+  return { value: hex, label: 'Custom' }
 }
 
 interface OrganisationFormProps {
@@ -49,16 +85,39 @@ export default function OrganisationForm({
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   // Get colors already used by other organisations (excluding current one being edited)
-  const usedColors = new Set(
+  const usedColors = useMemo(() => new Set(
     existingOrganisations
       .filter(org => org.id !== organisation?.id && org.pinColor)
       .map(org => org.pinColor?.toLowerCase())
-  )
+  ), [existingOrganisations, organisation?.id])
   
-  // Filter available colors to only show unused ones
-  const availableColors = PIN_COLORS.filter(
-    color => !usedColors.has(color.value.toLowerCase())
-  )
+  // Filter available colors to only show unused ones, ensuring at least 5 options
+  const MIN_COLOR_OPTIONS = 5
+  const availableColors = useMemo(() => {
+    const unusedPresets = PIN_COLORS.filter(
+      color => !usedColors.has(color.value.toLowerCase())
+    )
+    
+    // If we have at least 5 unused presets, use them
+    if (unusedPresets.length >= MIN_COLOR_OPTIONS) {
+      return unusedPresets
+    }
+    
+    // Otherwise, generate random colors to fill up to 5
+    const result = [...unusedPresets]
+    const allUsedColors = new Set([
+      ...usedColors,
+      ...PIN_COLORS.map(c => c.value.toLowerCase())
+    ])
+    
+    while (result.length < MIN_COLOR_OPTIONS) {
+      const randomColor = generateRandomColor(allUsedColors)
+      allUsedColors.add(randomColor.value.toLowerCase())
+      result.push(randomColor)
+    }
+    
+    return result
+  }, [usedColors])
   
   const [formData, setFormData] = useState({
     name: organisation?.name || '',
@@ -252,9 +311,6 @@ export default function OrganisationForm({
                   title={color.label}
                 />
               ))}
-              {availableColors.length === 0 && (
-                <span className="text-gray-400 text-sm">All preset colors are in use</span>
-              )}
             </div>
             
             {/* Custom hex input */}
